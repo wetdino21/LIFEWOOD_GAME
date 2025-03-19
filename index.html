@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lifewood vs Robot - Battlefield Game</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div id="game-container">
+        <div id="player1" class="player"></div>
+        <div id="player2" class="player"></div>
+
+        <div id="player1-status" class="status-bar">
+            <div class="hp-bar-container">
+                <div id="player1-hp" class="hp-bar" style="width: 100%;"></div>
+            </div>
+            <div class="energy-bar-container">
+                <div id="player1-energy" class="energy-bar" style="width: 0%;"></div>
+            </div>
+            <div class="player-name">
+                <h2 id="player1-name">Player 1</h2>
+            </div>
+        </div>
+
+        <div id="player2-status" class="status-bar">
+            <div class="hp-bar-container">
+                <div id="player2-hp" class="hp-bar" style="width: 100%;"></div>
+            </div>
+            <div class="energy-bar-container">
+                <div id="player2-energy" class="energy-bar" style="width: 0%;"></div>
+            </div>
+            <div class="player-name">
+                <h2 id="player2-name">Player 2</h2>
+            </div>
+        </div>
+
+        <button id="reset-button">Reset Game</button>
+
+        <div id="game-over">
+            <h2 id="winner-text">Player 1 Wins!</h2>
+            <button id="play-again">Play Again</button>
+        </div>
+    </div>
+
+    <div id="game-start-overlay">
+        <div id="game-start-content">
+            <h1>Lifewood vs Robot!</h1>
+            <p><strong>Mechanics:</strong> Destroy your opponent by shooting projectiles and breaking walls to charge
+                your superpower.</p>
+            <div id="controls-container">
+                <div class="controls-column">
+                    <h3>Player 1 (Lifewood)</h3>
+                    <ul>
+                        <li>Move with <kbd>W</kbd>, <kbd>A</kbd>, <kbd>S</kbd>, <kbd>D</kbd></li>
+                        <li>Activate superpower with <kbd>Space</kbd></li>
+                    </ul>
+                </div>
+                <div class="controls-column">
+                    <h3>Player 2 (Robot)</h3>
+                    <ul>
+                        <li>Move with Arrow Keys</li>
+                        <li>Activate superpower with <kbd>Enter</kbd></li>
+                    </ul>
+                </div>
+            </div>
+            <button id="start-game-button">Start Game</button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+
+</html>
