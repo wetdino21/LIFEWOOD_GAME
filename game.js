@@ -29,7 +29,7 @@ let player1 = {
         left: false,
         right: false
     },
-    lastDirection: { x: 1, y: 0 }
+    lastDirection: { x: 1, y: 0, angle: 0 }
 };
 
 let player2 = {
@@ -46,7 +46,7 @@ let player2 = {
         left: false,
         right: false
     },
-    lastDirection: { x: -1, y: 0 }
+    lastDirection: { x: -1, y: 0, angle: 0 }
 };
 
 let projectiles = [];
@@ -269,138 +269,369 @@ function createProjectile(x, y, directionX, directionY, isPlayer1) {
 }
 
 // Move players based on input
+// function movePlayers() {
+//     // Player 1 movement
+//     let newX1 = player1.x;
+//     let newY1 = player1.y;
+
+//     if (player1.movement.up) {
+//         newY1 -= PLAYER_SPEED;
+//         player1.lastDirection = { x: 0, y: -1 }; // Moving up
+//     }
+//     if (player1.movement.down) {
+//         newY1 += PLAYER_SPEED;
+//         player1.lastDirection = { x: 0, y: 1 }; // Moving down
+//     }
+//     if (player1.movement.left) {
+//         newX1 -= PLAYER_SPEED;
+//         player1.lastDirection = { x: -1, y: 0 }; // Moving left
+//     }
+//     if (player1.movement.right) {
+//         newX1 += PLAYER_SPEED;
+//         player1.lastDirection = { x: 1, y: 0 }; // Moving right
+//     }
+
+//     // Handle diagonal movement for Player 1
+//     if (player1.movement.up && player1.movement.right) {
+//         player1.lastDirection = { x: 1, y: -1 }; // Moving up-right
+//     }
+//     if (player1.movement.up && player1.movement.left) {
+//         player1.lastDirection = { x: -1, y: -1 }; // Moving up-left
+//     }
+//     if (player1.movement.down && player1.movement.right) {
+//         player1.lastDirection = { x: 1, y: 1 }; // Moving down-right
+//     }
+//     if (player1.movement.down && player1.movement.left) {
+//         player1.lastDirection = { x: -1, y: 1 }; // Moving down-left
+//     }
+
+//     // Player 2 movement
+//     let newX2 = player2.x;
+//     let newY2 = player2.y;
+
+//     if (player2.movement.up) {
+//         newY2 -= PLAYER_SPEED;
+//         player2.lastDirection = { x: 0, y: -1 }; // Moving up
+//     }
+//     if (player2.movement.down) {
+//         newY2 += PLAYER_SPEED;
+//         player2.lastDirection = { x: 0, y: 1 }; // Moving down
+//     }
+//     if (player2.movement.left) {
+//         newX2 -= PLAYER_SPEED;
+//         player2.lastDirection = { x: -1, y: 0 }; // Moving left
+//     }
+//     if (player2.movement.right) {
+//         newX2 += PLAYER_SPEED;
+//         player2.lastDirection = { x: 1, y: 0 }; // Moving right
+//     }
+
+//     // Handle diagonal movement for Player 2
+//     if (player2.movement.up && player2.movement.right) {
+//         player2.lastDirection = { x: 1, y: -1 }; // Moving up-right
+//     }
+//     if (player2.movement.up && player2.movement.left) {
+//         player2.lastDirection = { x: -1, y: -1 }; // Moving up-left
+//     }
+//     if (player2.movement.down && player2.movement.right) {
+//         player2.lastDirection = { x: 1, y: 1 }; // Moving down-right
+//     }
+//     if (player2.movement.down && player2.movement.left) {
+//         player2.lastDirection = { x: -1, y: 1 }; // Moving down-left
+//     }
+
+//     // Boundary checks for player 1
+//     newX1 = Math.max(0, Math.min(GAME_WIDTH - PLAYER_SIZE, newX1));
+//     newY1 = Math.max(0, Math.min(GAME_HEIGHT - PLAYER_SIZE, newY1));
+
+//     // Boundary checks for player 2
+//     newX2 = Math.max(0, Math.min(GAME_WIDTH - PLAYER_SIZE, newX2));
+//     newY2 = Math.max(0, Math.min(GAME_HEIGHT - PLAYER_SIZE, newY2));
+
+//     // Wall collision checks for player 1
+//     const player1Box = {
+//         x: newX1,
+//         y: newY1,
+//         width: PLAYER_SIZE,
+//         height: PLAYER_SIZE
+//     };
+
+//     // Wall collision checks for player 2
+//     const player2Box = {
+//         x: newX2,
+//         y: newY2,
+//         width: PLAYER_SIZE,
+//         height: PLAYER_SIZE
+//     };
+
+//     // Check wall collisions for both players
+//     let player1Colliding = false;
+//     let player2Colliding = false;
+
+//     for (const wall of walls) {
+//         if (checkCollision(player1Box, wall)) {
+//             player1Colliding = true;
+//         }
+//         if (checkCollision(player2Box, wall)) {
+//             player2Colliding = true;
+//         }
+//     }
+
+//     // Check player collision
+//     if (checkCollision(player1Box, player2Box)) {
+//         // Prevent overlapping by reverting positions
+//         if (player1.movement.up || player1.movement.down || player1.movement.left || player1.movement.right) {
+//             newX1 = player1.x;
+//             newY1 = player1.y;
+//         }
+//         if (player2.movement.up || player2.movement.down || player2.movement.left || player2.movement.right) {
+//             newX2 = player2.x;
+//             newY2 = player2.y;
+//         }
+//     }
+
+//     // Only update positions if no collision
+//     if (!player1Colliding) {
+//         player1.x = newX1;
+//         player1.y = newY1;
+//     }
+
+//     if (!player2Colliding) {
+//         player2.x = newX2;
+//         player2.y = newY2;
+//     }
+// }
+// function movePlayers() {
+//     try {
+//         // Validate player1 angle
+//         if (typeof player1.lastDirection.angle !== 'number') {
+//             player1.lastDirection.angle = 0;
+//         }
+
+//         // Validate player2 angle
+//         if (typeof player2.lastDirection.angle !== 'number') {
+//             player2.lastDirection.angle = 0;
+//         }
+
+//         // Player 1 movement
+//         let newX1 = player1.x;
+//         let newY1 = player1.y;
+
+//         if (player1.movement.left) {
+//             player1.lastDirection.angle = (player1.lastDirection.angle - 5 + 360) % 360;
+//         }
+//         if (player1.movement.right) {
+//             player1.lastDirection.angle = (player1.lastDirection.angle + 5) % 360;
+//         }
+
+//         if (player1.movement.up) {
+//             newX1 += Math.cos((player1.lastDirection.angle * Math.PI) / 180) * PLAYER_SPEED;
+//             newY1 += Math.sin((player1.lastDirection.angle * Math.PI) / 180) * PLAYER_SPEED;
+//         }
+//         if (player1.movement.down) {
+//             newX1 -= Math.cos((player1.lastDirection.angle * Math.PI) / 180) * PLAYER_SPEED;
+//             newY1 -= Math.sin((player1.lastDirection.angle * Math.PI) / 180) * PLAYER_SPEED;
+//         }
+
+//         // Player 2 movement
+//         let newX2 = player2.x;
+//         let newY2 = player2.y;
+
+//         if (player2.movement.left) {
+//             player2.lastDirection.angle = (player2.lastDirection.angle - 5 + 360) % 360;
+//         }
+//         if (player2.movement.right) {
+//             player2.lastDirection.angle = (player2.lastDirection.angle + 5) % 360;
+//         }
+
+//         if (player2.movement.up) {
+//             newX2 += Math.cos((player2.lastDirection.angle * Math.PI) / 180) * PLAYER_SPEED;
+//             newY2 += Math.sin((player2.lastDirection.angle * Math.PI) / 180) * PLAYER_SPEED;
+//         }
+//         if (player2.movement.down) {
+//             newX2 -= Math.cos((player2.lastDirection.angle * Math.PI) / 180) * PLAYER_SPEED;
+//             newY2 -= Math.sin((player2.lastDirection.angle * Math.PI) / 180) * PLAYER_SPEED;
+//         }
+
+//         // Boundary checks
+//         newX1 = Math.max(0, Math.min(GAME_WIDTH - PLAYER_SIZE, newX1));
+//         newY1 = Math.max(0, Math.min(GAME_HEIGHT - PLAYER_SIZE, newY1));
+
+//         newX2 = Math.max(0, Math.min(GAME_WIDTH - PLAYER_SIZE, newX2));
+//         newY2 = Math.max(0, Math.min(GAME_HEIGHT - PLAYER_SIZE, newY2));
+
+//         const player1Box = { x: newX1, y: newY1, width: PLAYER_SIZE, height: PLAYER_SIZE };
+//         const player2Box = { x: newX2, y: newY2, width: PLAYER_SIZE, height: PLAYER_SIZE };
+
+//         let player1Colliding = false;
+//         let player2Colliding = false;
+
+//         for (const wall of walls) {
+//             if (checkCollision(player1Box, wall)) {
+//                 player1Colliding = true;
+//             }
+//             if (checkCollision(player2Box, wall)) {
+//                 player2Colliding = true;
+//             }
+//         }
+
+//         // Prevent players from overlapping
+//         if (checkCollision(player1Box, player2Box)) {
+//             if (player1.movement.up || player1.movement.down) {
+//                 newX1 = player1.x;
+//                 newY1 = player1.y;
+//             }
+//             if (player2.movement.up || player2.movement.down) {
+//                 newX2 = player2.x;
+//                 newY2 = player2.y;
+//             }
+//         }
+
+//         // Apply movement only if not colliding
+//         if (!player1Colliding) {
+//             player1.x = newX1;
+//             player1.y = newY1;
+//         }
+
+//         if (!player2Colliding) {
+//             player2.x = newX2;
+//             player2.y = newY2;
+//         }
+
+//         // Apply rotation
+//         player1Element.style.transform = `rotate(${player1.lastDirection.angle}deg)`;
+//         player2Element.style.transform = `rotate(${player2.lastDirection.angle}deg)`;
+
+//     } catch (e) {
+//         console.error("Error in movePlayers:", e);
+//     }
+// }
 function movePlayers() {
-    // Player 1 movement
-    let newX1 = player1.x;
-    let newY1 = player1.y;
+    try {
+        if (typeof player1.lastDirection.angle !== 'number') player1.lastDirection.angle = 0;
+        if (typeof player2.lastDirection.angle !== 'number') player2.lastDirection.angle = 0;
 
-    if (player1.movement.up) {
-        newY1 -= PLAYER_SPEED;
-        player1.lastDirection = { x: 0, y: -1 }; // Moving up
-    }
-    if (player1.movement.down) {
-        newY1 += PLAYER_SPEED;
-        player1.lastDirection = { x: 0, y: 1 }; // Moving down
-    }
-    if (player1.movement.left) {
-        newX1 -= PLAYER_SPEED;
-        player1.lastDirection = { x: -1, y: 0 }; // Moving left
-    }
-    if (player1.movement.right) {
-        newX1 += PLAYER_SPEED;
-        player1.lastDirection = { x: 1, y: 0 }; // Moving right
-    }
+        // Player 1 rotation
+        if (player1.movement.left) player1.lastDirection.angle = (player1.lastDirection.angle - 5 + 360) % 360;
+        if (player1.movement.right) player1.lastDirection.angle = (player1.lastDirection.angle + 5) % 360;
 
-    // Handle diagonal movement for Player 1
-    if (player1.movement.up && player1.movement.right) {
-        player1.lastDirection = { x: 1, y: -1 }; // Moving up-right
-    }
-    if (player1.movement.up && player1.movement.left) {
-        player1.lastDirection = { x: -1, y: -1 }; // Moving up-left
-    }
-    if (player1.movement.down && player1.movement.right) {
-        player1.lastDirection = { x: 1, y: 1 }; // Moving down-right
-    }
-    if (player1.movement.down && player1.movement.left) {
-        player1.lastDirection = { x: -1, y: 1 }; // Moving down-left
-    }
+        // Player 2 rotation
+        if (player2.movement.left) player2.lastDirection.angle = (player2.lastDirection.angle - 5 + 360) % 360;
+        if (player2.movement.right) player2.lastDirection.angle = (player2.lastDirection.angle + 5) % 360;
 
-    // Player 2 movement
-    let newX2 = player2.x;
-    let newY2 = player2.y;
+        // Calculate deltas
+        const rad1 = (player1.lastDirection.angle * Math.PI) / 180;
+        const dx1 = Math.cos(rad1) * PLAYER_SPEED;
+        const dy1 = Math.sin(rad1) * PLAYER_SPEED;
 
-    if (player2.movement.up) {
-        newY2 -= PLAYER_SPEED;
-        player2.lastDirection = { x: 0, y: -1 }; // Moving up
-    }
-    if (player2.movement.down) {
-        newY2 += PLAYER_SPEED;
-        player2.lastDirection = { x: 0, y: 1 }; // Moving down
-    }
-    if (player2.movement.left) {
-        newX2 -= PLAYER_SPEED;
-        player2.lastDirection = { x: -1, y: 0 }; // Moving left
-    }
-    if (player2.movement.right) {
-        newX2 += PLAYER_SPEED;
-        player2.lastDirection = { x: 1, y: 0 }; // Moving right
-    }
+        const rad2 = (player2.lastDirection.angle * Math.PI) / 180;
+        const dx2 = Math.cos(rad2) * PLAYER_SPEED;
+        const dy2 = Math.sin(rad2) * PLAYER_SPEED;
 
-    // Handle diagonal movement for Player 2
-    if (player2.movement.up && player2.movement.right) {
-        player2.lastDirection = { x: 1, y: -1 }; // Moving up-right
-    }
-    if (player2.movement.up && player2.movement.left) {
-        player2.lastDirection = { x: -1, y: -1 }; // Moving up-left
-    }
-    if (player2.movement.down && player2.movement.right) {
-        player2.lastDirection = { x: 1, y: 1 }; // Moving down-right
-    }
-    if (player2.movement.down && player2.movement.left) {
-        player2.lastDirection = { x: -1, y: 1 }; // Moving down-left
-    }
-
-    // Boundary checks for player 1
-    newX1 = Math.max(0, Math.min(GAME_WIDTH - PLAYER_SIZE, newX1));
-    newY1 = Math.max(0, Math.min(GAME_HEIGHT - PLAYER_SIZE, newY1));
-
-    // Boundary checks for player 2
-    newX2 = Math.max(0, Math.min(GAME_WIDTH - PLAYER_SIZE, newX2));
-    newY2 = Math.max(0, Math.min(GAME_HEIGHT - PLAYER_SIZE, newY2));
-
-    // Wall collision checks for player 1
-    const player1Box = {
-        x: newX1,
-        y: newY1,
-        width: PLAYER_SIZE,
-        height: PLAYER_SIZE
-    };
-
-    // Wall collision checks for player 2
-    const player2Box = {
-        x: newX2,
-        y: newY2,
-        width: PLAYER_SIZE,
-        height: PLAYER_SIZE
-    };
-
-    // Check wall collisions for both players
-    let player1Colliding = false;
-    let player2Colliding = false;
-
-    for (const wall of walls) {
-        if (checkCollision(player1Box, wall)) {
-            player1Colliding = true;
+        // Proposed positions
+        let newX1 = player1.x, newY1 = player1.y;
+        if (player1.movement.up) {
+            newX1 += dx1;
+            newY1 += dy1;
         }
-        if (checkCollision(player2Box, wall)) {
-            player2Colliding = true;
+        if (player1.movement.down) {
+            newX1 -= dx1;
+            newY1 -= dy1;
         }
-    }
 
-    // Check player collision
-    if (checkCollision(player1Box, player2Box)) {
-        // Prevent overlapping by reverting positions
-        if (player1.movement.up || player1.movement.down || player1.movement.left || player1.movement.right) {
-            newX1 = player1.x;
-            newY1 = player1.y;
+        let newX2 = player2.x, newY2 = player2.y;
+        if (player2.movement.up) {
+            newX2 += dx2;
+            newY2 += dy2;
         }
-        if (player2.movement.up || player2.movement.down || player2.movement.left || player2.movement.right) {
-            newX2 = player2.x;
-            newY2 = player2.y;
+        if (player2.movement.down) {
+            newX2 -= dx2;
+            newY2 -= dy2;
         }
-    }
 
-    // Only update positions if no collision
-    if (!player1Colliding) {
-        player1.x = newX1;
-        player1.y = newY1;
-    }
+        // Boundary limits
+        newX1 = Math.max(0, Math.min(GAME_WIDTH - PLAYER_SIZE, newX1));
+        newY1 = Math.max(0, Math.min(GAME_HEIGHT - PLAYER_SIZE, newY1));
+        newX2 = Math.max(0, Math.min(GAME_WIDTH - PLAYER_SIZE, newX2));
+        newY2 = Math.max(0, Math.min(GAME_HEIGHT - PLAYER_SIZE, newY2));
 
-    if (!player2Colliding) {
-        player2.x = newX2;
-        player2.y = newY2;
+        const player1Box = { x: newX1, y: newY1, width: PLAYER_SIZE, height: PLAYER_SIZE };
+        const player2Box = { x: newX2, y: newY2, width: PLAYER_SIZE, height: PLAYER_SIZE };
+
+        // Check wall collisions with sliding (player 1)
+        let slideX1 = newX1, slideY1 = newY1;
+        let collided1 = false;
+        for (const wall of walls) {
+            if (checkCollision(player1Box, wall)) {
+                collided1 = true;
+
+                // Try sliding along X
+                const testBoxX = { x: newX1, y: player1.y, width: PLAYER_SIZE, height: PLAYER_SIZE };
+                if (!checkCollision(testBoxX, wall)) {
+                    slideY1 = player1.y;
+                } else {
+                    // Try sliding along Y
+                    const testBoxY = { x: player1.x, y: newY1, width: PLAYER_SIZE, height: PLAYER_SIZE };
+                    if (!checkCollision(testBoxY, wall)) {
+                        slideX1 = player1.x;
+                    } else {
+                        // Block both
+                        slideX1 = player1.x;
+                        slideY1 = player1.y;
+                    }
+                }
+                break;
+            }
+        }
+
+        // Check wall collisions with sliding (player 2)
+        let slideX2 = newX2, slideY2 = newY2;
+        let collided2 = false;
+        for (const wall of walls) {
+            if (checkCollision(player2Box, wall)) {
+                collided2 = true;
+
+                const testBoxX = { x: newX2, y: player2.y, width: PLAYER_SIZE, height: PLAYER_SIZE };
+                if (!checkCollision(testBoxX, wall)) {
+                    slideY2 = player2.y;
+                } else {
+                    const testBoxY = { x: player2.x, y: newY2, width: PLAYER_SIZE, height: PLAYER_SIZE };
+                    if (!checkCollision(testBoxY, wall)) {
+                        slideX2 = player2.x;
+                    } else {
+                        slideX2 = player2.x;
+                        slideY2 = player2.y;
+                    }
+                }
+                break;
+            }
+        }
+
+        // Prevent overlapping each other
+        const futureBox1 = { x: slideX1, y: slideY1, width: PLAYER_SIZE, height: PLAYER_SIZE };
+        const futureBox2 = { x: slideX2, y: slideY2, width: PLAYER_SIZE, height: PLAYER_SIZE };
+        if (checkCollision(futureBox1, futureBox2)) {
+            slideX1 = player1.x;
+            slideY1 = player1.y;
+            slideX2 = player2.x;
+            slideY2 = player2.y;
+        }
+
+        // Apply positions
+        player1.x = slideX1;
+        player1.y = slideY1;
+        player2.x = slideX2;
+        player2.y = slideY2;
+
+        // Apply rotation visually
+        player1Element.style.transform = `rotate(${player1.lastDirection.angle}deg)`;
+        player2Element.style.transform = `rotate(${player2.lastDirection.angle}deg)`;
+
+    } catch (e) {
+        console.error("Error in movePlayers:", e);
     }
 }
+
 
 // Fire projectiles
 function fireProjectiles() {
@@ -410,42 +641,100 @@ function fireProjectiles() {
     if (currentTime - player1.lastShot > FIRE_RATE) {
         if (player1.superpower) {
             // Player 1 Superpower: Vine Attack
-            const offsets = [-60, -30, 0, 30, 60]; // Spread offsets for 5 vines
-            for (let i = 0; i < offsets.length; i++) {
-                const vineProjectile = document.createElement('div');
-                vineProjectile.className = 'vine-effect';
+            const vineProjectile = document.createElement('div');
+            vineProjectile.className = 'vine-projectile';
 
-                // Adjust position based on direction
-                if (player1.lastDirection.x !== 0) { // Horizontal firing
-                    vineProjectile.style.left = player1.x + PLAYER_SIZE / 2 - 25 + player1.lastDirection.x * 50 + 'px';
-                    vineProjectile.style.top = player1.y + PLAYER_SIZE / 2 - 25 + offsets[i] + 'px';
-                } else { // Vertical firing
-                    vineProjectile.style.left = player1.x + PLAYER_SIZE / 2 - 25 + offsets[i] + 'px';
-                    vineProjectile.style.top = player1.y + PLAYER_SIZE / 2 - 25 + player1.lastDirection.y * 50 + 'px';
+            // Set the initial position of the vine projectile relative to the player
+            let vineX = player1.x + PLAYER_SIZE / 2 - 100; // Center horizontally
+            let vineY = player1.y + PLAYER_SIZE / 2 - 50; // Center vertically
+
+            // Adjust position based on firing direction
+            if (player1.lastDirection.x === 1) {
+                // Firing right
+                vineProjectile.style.transform = 'rotate(180deg)';
+            } else if (player1.lastDirection.x === -1) {
+                // Firing left
+                vineProjectile.style.transform = 'rotate(0deg)';
+            } else if (player1.lastDirection.y === -1) {
+                // Firing up
+                vineProjectile.style.transform = 'rotate(90deg)';
+            } else if (player1.lastDirection.y === 1) {
+                // Firing down
+                vineProjectile.style.transform = 'rotate(-90deg)';
+            }
+
+            // Ensure the projectile stays within the game container
+            vineX = Math.max(0, Math.min(GAME_WIDTH - 100, vineX));
+            vineY = Math.max(0, Math.min(GAME_HEIGHT - 100, vineY));
+
+            vineProjectile.style.left = vineX + 'px';
+            vineProjectile.style.top = vineY + 'px';
+
+            gameContainer.appendChild(vineProjectile);
+
+            projectiles.push({
+                element: vineProjectile,
+                x: vineX,
+                y: vineY,
+                width: 100,
+                height: 100,
+                directionX: player1.lastDirection.x,
+                directionY: player1.lastDirection.y,
+                isPlayer1: true,
+                isSuperpower: true,
+                damage: 35
+            });
+
+            // Fire the second vine projectile after a short delay
+            setTimeout(() => {
+                // Player 2 Superpower: Rocket Attack
+                const vineProjectile = document.createElement('div');
+                vineProjectile.className = 'vine-projectile';
+
+                // Set the initial position of the vine projectile relative to the player
+                let vineX = player1.x + PLAYER_SIZE / 2 - 100; // Center horizontally
+                let vineY = player1.y + PLAYER_SIZE / 2 - 50; // Center vertically
+
+                // Adjust position based on firing direction
+                if (player1.lastDirection.x === 1) {
+                    // Firing right
+                    vineProjectile.style.transform = 'rotate(180deg)';
+                } else if (player1.lastDirection.x === -1) {
+                    // Firing left
+                    vineProjectile.style.transform = 'rotate(0deg)';
+                } else if (player1.lastDirection.y === -1) {
+                    // Firing up
+                    vineProjectile.style.transform = 'rotate(90deg)';
+                } else if (player1.lastDirection.y === 1) {
+                    // Firing down
+                    vineProjectile.style.transform = 'rotate(-90deg)';
                 }
+
+                // Ensure the projectile stays within the game container
+                vineX = Math.max(0, Math.min(GAME_WIDTH - 100, vineX));
+                vineY = Math.max(0, Math.min(GAME_HEIGHT - 100, vineY));
+
+                vineProjectile.style.left = vineX + 'px';
+                vineProjectile.style.top = vineY + 'px';
 
                 gameContainer.appendChild(vineProjectile);
 
                 projectiles.push({
                     element: vineProjectile,
-                    x: player1.x + PLAYER_SIZE / 2 - 25 + (player1.lastDirection.x !== 0 ? player1.lastDirection.x * 50 : offsets[i]),
-                    y: player1.y + PLAYER_SIZE / 2 - 25 + (player1.lastDirection.x === 0 ? player1.lastDirection.y * 50 : offsets[i]),
-                    width: 50,
-                    height: 50,
+                    x: vineX,
+                    y: vineY,
+                    width: 100,
+                    height: 100,
                     directionX: player1.lastDirection.x,
                     directionY: player1.lastDirection.y,
                     isPlayer1: true,
                     isSuperpower: true,
-                    damage: 15 // Each vine deals 15 damage
+                    damage: 35
                 });
-            }
+            }, 500);
 
-            player1.superpowerShots = (player1.superpowerShots || 0) + 1;
-            if (player1.superpowerShots >= 2) {
-                player1.superpower = false; // End superpower after 2 volleys
-                player1.superpowerShots = 0;
-            }
-        } else {
+            player1.superpower = false; // End superpower after firing
+        } else if (!player1.superpower) {
             // Normal attack
             const projectileX = player1.x + PLAYER_SIZE / 2 - PROJECTILE_SIZE / 2;
             const projectileY = player1.y + PLAYER_SIZE / 2 - PROJECTILE_SIZE / 2;
@@ -461,9 +750,9 @@ function fireProjectiles() {
             const rocketProjectile = document.createElement('div');
             rocketProjectile.className = 'rocket-projectile';
 
-            // Set the initial position of the rocket
-            rocketProjectile.style.left = player2.x + PLAYER_SIZE / 2 - 100 + 'px';
-            rocketProjectile.style.top = player2.y + PLAYER_SIZE / 2 - 100 + 'px';
+            // Set the initial position of the rocket projectile relative to the player
+            let rocketX = player2.x + PLAYER_SIZE / 2 - 100; // Center horizontally
+            let rocketY = player2.y + PLAYER_SIZE / 2 - 100; // Center vertically
 
             // Rotate the rocket based on the firing direction
             if (player2.lastDirection.x === 1) {
@@ -480,23 +769,30 @@ function fireProjectiles() {
                 rocketProjectile.style.transform = 'rotate(-90deg)';
             }
 
+            // Ensure the projectile stays within the game container
+            rocketX = Math.max(0, Math.min(GAME_WIDTH - 200, rocketX));
+            rocketY = Math.max(0, Math.min(GAME_HEIGHT - 200, rocketY));
+
+            rocketProjectile.style.left = rocketX + 'px';
+            rocketProjectile.style.top = rocketY + 'px';
+
             gameContainer.appendChild(rocketProjectile);
 
             projectiles.push({
                 element: rocketProjectile,
-                x: player2.x + PLAYER_SIZE / 2 - 100,
-                y: player2.y + PLAYER_SIZE / 2 - 100,
+                x: rocketX,
+                y: rocketY,
                 width: 200,
                 height: 200,
                 directionX: player2.lastDirection.x,
                 directionY: player2.lastDirection.y,
                 isPlayer1: false,
                 isSuperpower: true,
-                damage: 75 // Rocket deals 75 damage
+                damage: 75
             });
 
-            player2.superpower = false; // End superpower after 1 rocket
-        } else {
+            player2.superpower = false; // End superpower after firing
+        } else if (!player2.superpower) {
             // Normal attack
             const projectileX = player2.x + PLAYER_SIZE / 2 - PROJECTILE_SIZE / 2;
             const projectileY = player2.y + PLAYER_SIZE / 2 - PROJECTILE_SIZE / 2;
@@ -507,7 +803,7 @@ function fireProjectiles() {
 }
 
 // Handle wall breaking and energy gain
-function handleWallBreaking(wall, index, player) {
+function handleWallBreaking(wall, index, player, isSuperpowerProjectile) {
     const wallElement = wall.element; // Use a direct reference to the wall's DOM element
     if (!wallElement) return; // Ensure the wall element exists
 
@@ -526,9 +822,11 @@ function handleWallBreaking(wall, index, player) {
             // Remove the orange wall after the 3rd hit
             wallElement.classList.add('breaking'); // Optional breaking animation
 
-            // Grant energy to the player who broke the wall
-            const energyGain = ENERGY_GAIN_PER_WALL * 2; // Orange walls give double energy
-            player.energy = Math.min(100, player.energy + energyGain); // Cap energy at 100
+            // Grant energy only if the wall was broken by a normal attack
+            if (!isSuperpowerProjectile) {
+                const energyGain = ENERGY_GAIN_PER_WALL * 2; // Orange walls give double energy
+                player.energy = Math.min(100, player.energy + energyGain); // Cap energy at 100
+            }
 
             // Remove the wall after a short delay
             setTimeout(() => {
@@ -551,9 +849,11 @@ function handleWallBreaking(wall, index, player) {
             // Remove the green wall after the 3rd hit
             wallElement.classList.add('breaking'); // Optional breaking animation
 
-            // Grant energy to the player who broke the wall
-            const energyGain = ENERGY_GAIN_PER_WALL;
-            player.energy = Math.min(100, player.energy + energyGain); // Cap energy at 100
+            // Grant energy only if the wall was broken by a normal attack
+            if (!isSuperpowerProjectile) {
+                const energyGain = ENERGY_GAIN_PER_WALL;
+                player.energy = Math.min(100, player.energy + energyGain); // Cap energy at 100
+            }
 
             // Remove the wall after a short delay
             setTimeout(() => {
@@ -597,7 +897,7 @@ function updateProjectiles() {
         for (let j = walls.length - 1; j >= 0; j--) {
             const wall = walls[j];
             if (checkCollision(projectile, wall)) {
-                handleWallBreaking(wall, j, projectile.isPlayer1 ? player1 : player2);
+                handleWallBreaking(wall, j, projectile.isPlayer1 ? player1 : player2, projectile.isSuperpower);
 
                 // For superpower projectiles, continue breaking walls
                 if (!projectile.isSuperpower) {
@@ -620,6 +920,12 @@ function updateProjectiles() {
         if (checkCollision(projectile, targetBox)) {
             targetPlayer.hp -= projectile.damage || PROJECTILE_DAMAGE; // Use custom damage for superpowers
             createHitEffect(targetPlayer.x + PLAYER_SIZE / 2, targetPlayer.y + PLAYER_SIZE / 2);
+
+            // Apply knockback if hit by a superpower
+            if (projectile.isSuperpower) {
+                applyKnockback(targetPlayer, projectile.directionX, projectile.directionY);
+            }
+
             projectile.element.remove();
             projectiles.splice(i, 1);
 
@@ -629,6 +935,38 @@ function updateProjectiles() {
             }
         }
     }
+}
+
+// Apply knockback to the player
+function applyKnockback(player, directionX, directionY) {
+    const knockbackDistance = 50; // Distance to knock back the player
+    let newX = player.x + directionX * knockbackDistance;
+    let newY = player.y + directionY * knockbackDistance;
+
+    // Ensure the player doesn't get positioned inside walls
+    const playerBox = {
+        x: newX,
+        y: newY,
+        width: PLAYER_SIZE,
+        height: PLAYER_SIZE
+    };
+
+    for (const wall of walls) {
+        if (checkCollision(playerBox, wall)) {
+            // Cancel knockback if it would place the player inside a wall
+            newX = player.x;
+            newY = player.y;
+            break;
+        }
+    }
+
+    // Ensure the player stays within the game boundaries
+    newX = Math.max(0, Math.min(GAME_WIDTH - PLAYER_SIZE, newX));
+    newY = Math.max(0, Math.min(GAME_HEIGHT - PLAYER_SIZE, newY));
+
+    // Update player position
+    player.x = newX;
+    player.y = newY;
 }
 
 // Create hit effect

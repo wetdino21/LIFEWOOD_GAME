@@ -11,7 +11,9 @@ body {
     width: 1050px;
     height: 510px;
     margin: 100px auto;
-    background-color: #333;
+    background-image: url('assets/ground1.jpg');
+    /* background-color: #333; */
+    background-color: white;
     border: 4px solid #555;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
 }
@@ -22,6 +24,21 @@ body {
     height: 38px;
     border-radius: 50%;
     z-index: 10;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.player::after {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 4px;
+    background-color: black; /* Arrow color */
+    border-radius: 2px;
+    top: 50%;
+    left: 100%; /* Position the arrow at the front */
+    transform: translate(-50%, -50%);
 }
 
 #player1 {
@@ -117,27 +134,39 @@ body {
 }
 
 .orange-wall {
-    background-image: url('assets/orange-diamond.svg'); /* Replace with the path to your orange wall image */
+    background-image: url('assets/orange-diamond.svg');
+    /* Replace with the path to your orange wall image */
     background-repeat: no-repeat;
     background-position: center;
     height: 10px;
 }
 
 .wall {
-    background-size: cover; /* Ensure the sprite fits the wall size */
+    background-size: cover;
+    /* Ensure the sprite fits the wall size */
     background-repeat: no-repeat;
-    background-position: 0 0; /* Default to the first wall (healthy) */
-    width: 30px; /* Match WALL_SIZE */
-    height: 30px; /* Match WALL_SIZE */
+    background-position: 0 0;
+    /* Default to the first wall (healthy) */
+    width: 30px;
+    /* Match WALL_SIZE */
+    height: 30px;
+    /* Match WALL_SIZE */
     z-index: 2;
+    box-shadow: 3px 3px 5px rgba(0, 0, 0, 1);
+}
+
+.orange-wall {
+    box-shadow: none;
 }
 
 .wall-cracked-1 {
-    background-position: -30px 0; /* Show the second wall (less damaged) */
+    background-position: -30px 0;
+    /* Show the second wall (less damaged) */
 }
 
 .wall-cracked-2 {
-    background-position: -60px 0; /* Show the third wall (very damaged) */
+    background-position: -60px 0;
+    /* Show the third wall (very damaged) */
 }
 
 .breaking {
@@ -307,7 +336,8 @@ body {
 
 .controls-column h3 {
     margin-bottom: 10px;
-    color: #FFD700; /* Gold color for headings */
+    color: #FFD700;
+    /* Gold color for headings */
 }
 
 .controls-column ul {
@@ -331,20 +361,24 @@ body {
 
 /* Orange wall default */
 .orange-wall {
-    background-image: url('assets/orange-wall.png'); /* Replace with the path to your orange wall sprite */
+    background-image: url('assets/orange-wall.png');
+    /* Replace with the path to your orange wall sprite */
     background-size: cover;
     background-repeat: no-repeat;
-    background-position: 0 0; /* Default to the first wall (healthy) */
+    background-position: 0 0;
+    /* Default to the first wall (healthy) */
 }
 
 /* Orange wall after 1st hit (less damaged) */
 .orange-wall-cracked-1 {
-    background-position: -30px 0; /* Show the second wall (less damaged) */
+    background-position: -30px 0;
+    /* Show the second wall (less damaged) */
 }
 
 /* Orange wall after 2nd hit (very damaged) */
 .orange-wall-cracked-2 {
-    background-position: -60px 0; /* Show the third wall (very damaged) */
+    background-position: -60px 0;
+    /* Show the third wall (very damaged) */
 }
 
 /* Breaking animation (shared with green walls) */
@@ -357,47 +391,37 @@ body {
         transform: scale(0.5);
         opacity: 1;
     }
+
     100% {
         transform: scale(1);
         opacity: 0;
     }
 }
-    
+
 /* superpower */
 
-/* Rocket projectile for Player 2 */
 /* Rocket projectile for Player 2 */
 .rocket-projectile {
     position: absolute;
     width: 300px;
     height: 200px;
-    background-image: url('assets/rocket.gif'); /* Replace with the path to your GIF */
-    background-size: cover; /* Ensure the GIF fits the projectile size */
+    background-image: url('assets/rocket.gif');
+    background-size: cover;
     background-repeat: no-repeat;
     border-radius: 40%;
-    box-shadow: 0 0 20px #FF5722; /* Optional glow effect */
+    border-bottom-left-radius: 20%;
     z-index: 10;
 }
 
-/* Vine effect for Player 1 */
-.vine-effect {
+/* Vine projectile for Player 1 */
+.vine-projectile {
     position: absolute;
-    width: 50px;
-    height: 50px;
-    background-color: #4CAF50;
-    border-radius: 50%;
-    box-shadow: 0 0 10px #4CAF50;
-    animation: vine-grow 0.5s forwards;
+    width: 250px;
+    height: 100px;
+    background-image: url('assets/vines_leaves.gif');
+    background-size: cover;
+    background-repeat: no-repeat;
+    border-radius: 40%;
+    border-bottom-left-radius: 20%;
     z-index: 10;
-}
-
-@keyframes vine-grow {
-    0% {
-        transform: scale(0.8);
-        opacity: 1;
-    }
-    100% {
-        transform: scale(1);
-        opacity: 1;
-    }
 }
