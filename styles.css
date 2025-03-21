@@ -29,28 +29,34 @@ body {
     align-items: center;
 }
 
-.player::after {
+/* .player::after {
     content: '';
     position: absolute;
     width: 10px;
     height: 4px;
-    background-color: black; /* Arrow color */
+    background-color: black;
     border-radius: 2px;
     top: 50%;
-    left: 100%; /* Position the arrow at the front */
+    left: 100%;
     transform: translate(-50%, -50%);
-}
+} */
 
 #player1 {
-    background-color: #4CAF50;
+    /* background-color: #4CAF50;
     border: 2px solid #2E7D32;
-    box-shadow: 0 0 10px #4CAF50;
+    box-shadow: 0 0 10px #4CAF50; */
+    background-image: url('assets/r_run_shoot_13.png');
+    background-size: contain;
+    background-repeat: no-repeat;
 }
 
 #player2 {
-    background-color: #F44336;
+    /* background-color: #F44336;
     border: 2px solid #B71C1C;
-    box-shadow: 0 0 10px #F44336;
+    box-shadow: 0 0 10px #F44336; */
+    background-image: url('assets/robot.png');
+    background-size: contain;
+    background-repeat: no-repeat;
 }
 
 .status-bar {
@@ -403,9 +409,9 @@ body {
 /* Rocket projectile for Player 2 */
 .rocket-projectile {
     position: absolute;
-    width: 300px;
+    width: 320px;
     height: 200px;
-    background-image: url('assets/rocket.gif');
+    background-image: url('assets/default rocket.gif');
     background-size: cover;
     background-repeat: no-repeat;
     border-radius: 40%;
