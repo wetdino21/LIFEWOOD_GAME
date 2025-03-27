@@ -12,57 +12,66 @@ body {
     height: 510px;
     margin: 100px auto;
     background-image: url('assets/ground1.jpg');
-    /* background-color: #333; */
     background-color: white;
     border: 4px solid #555;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    /* overflow: hidden; */
 }
 
 .player {
     position: absolute;
-    width: 38px;
-    height: 38px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     z-index: 10;
+    background-size: cover;
+    background-position: center;
+    cursor: pointer;
     display: flex;
-    justify-content: center;
     align-items: center;
+    justify-content: center;
+    box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.5);
 }
 
-/* .player::after {
-    content: '';
+/* Arrow styles */
+.player-arrow {
     position: absolute;
     width: 10px;
-    height: 4px;
-    background-color: black;
-    border-radius: 2px;
-    top: 50%;
-    left: 100%;
+    height: 10px;
+    background-color: orange;
+    clip-path: polygon(50% 0%, 100% 50%, 0% 50%);
     transform: translate(-50%, -50%);
-} */
-
-#player1 {
-    /* background-color: #4CAF50;
-    border: 2px solid #2E7D32;
-    box-shadow: 0 0 10px #4CAF50; */
-    background-image: url('assets/r_run_shoot_13.png');
-    background-size: contain;
-    background-repeat: no-repeat;
+    z-index: 1;
+    rotate: 90deg;
+    top: 50%;
+    right: 0%;
 }
 
-#player2 {
-    /* background-color: #F44336;
-    border: 2px solid #B71C1C;
-    box-shadow: 0 0 10px #F44336; */
-    background-image: url('assets/robot.png');
-    background-size: contain;
-    background-repeat: no-repeat;
+/* Upload circle for player image */
+.upload-circle {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background-size: cover;
+    background-position: center;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s ease;
+}
+
+.upload-circle:hover {
+    transform: scale(1.1);
+    /* Slight zoom effect on hover */
 }
 
 .status-bar {
     margin: 10px;
     position: fixed;
-    width: 100px;
+    width: 130px;
     height: auto;
     display: flex;
     flex-direction: column;
@@ -78,6 +87,14 @@ body {
     border-radius: 4px;
 }
 
+.shield-bar-container {
+    width: 100%;
+    height: 3px;
+    background-color: #555;
+    border-radius: 4px;
+    margin-bottom: 5px;
+}
+
 .hp-bar,
 .energy-bar {
     height: 100%;
@@ -85,12 +102,20 @@ body {
     transition: width 0.2s;
 }
 
+.shield-bar {
+    height: 100%;
+    background-color: gold;
+    /* Gold color for the shield bar */
+    border-radius: 4px;
+}
+
 .hp-bar {
     background-color: #4CAF50;
 }
 
 .energy-bar {
-    background-color: #FFC107;
+    /* background-color: #FFC107; */
+    background-color: #9c07ff;
 }
 
 .player-name {
@@ -109,8 +134,6 @@ body {
 
 .projectile {
     position: absolute;
-    width: 10px;
-    height: 10px;
     border-radius: 50%;
     z-index: 5;
 }
@@ -179,7 +202,14 @@ body {
     animation: breaking-animation 0.3s forwards;
 }
 
+/* Superpower active effect */
 .superpower-active {
+    animation: superpower-pulse 0.5s infinite alternate;
+}
+
+/* Glowing effect for energy bar when full */
+.energy-full {
+    box-shadow: 0 0 10px 5px #c977ff54;
     animation: superpower-pulse 0.5s infinite alternate;
 }
 
@@ -189,9 +219,11 @@ body {
     }
 
     100% {
-        transform: scale(1.2);
+        transform: scale(1.05);
     }
 }
+
+
 
 #reset-button {
     position: fixed;
@@ -430,4 +462,54 @@ body {
     border-radius: 40%;
     border-bottom-left-radius: 20%;
     z-index: 10;
+}
+
+.drop {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background-size: cover;
+    background-position: center;
+    background-color: #0000005d;
+    border: 0.5px solid gold;
+    z-index: 5;
+    animation: drop-pulse 1s infinite alternate;
+}
+
+@keyframes drop-pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(1.2);
+        opacity: 0.8;
+    }
+}
+
+.player-shield {
+    position: absolute;
+    border: 1px gold;
+    border-radius: 50%;
+    background-color: #ffd90079;
+    opacity: 0.5;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.player-stats {
+    margin-top: 10px;
+    font-size: 12px;
+    color: white;
+}
+
+.player-stats ul {
+    list-style: none;
+    padding: 0;
+    margin: 5px 0 0 0;
+}
+
+.player-stats li {
+    margin: 2px 0;
 }

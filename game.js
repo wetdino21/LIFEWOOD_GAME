@@ -8,18 +8,29 @@ const PROJECTILE_SIZE = 10;
 const PROJECTILE_SPEED = 7;
 const WALL_SIZE = 30;
 const WALL_HITS_TO_BREAK = 3;
-const PLAYER_MAX_HP = 100;
+const PLAYER_MAX_HP = 1000;
 const ENERGY_GAIN_PER_WALL = 20;
 const PROJECTILE_DAMAGE = 10;
 const SUPERPOWER_DURATION = 3000; // 3 seconds
 const FIRE_RATE = 400; // ms between shots
+// Default images and colors
+const defaultPlayer1Image = null; // No default image, use color
+const defaultPlayer2Image = null; // No default image, use color
+const defaultPlayer1Color = 'green';
+const defaultPlayer2Color = 'red';
+let drops = [];
 
 // Game state
 let player1 = {
-    x: 100,
+    x: 50,
     y: GAME_HEIGHT / 2,
     hp: PLAYER_MAX_HP,
     energy: 0,
+    damage: 10,
+    projectileSpeed: 1,
+    bulletSize: 10,
+    bulletCount: 1, // New property
+    speed: 5,
     lastShot: 0,
     superpower: false,
     superpowerEndTime: 0,
@@ -29,7 +40,7 @@ let player1 = {
         left: false,
         right: false
     },
-    lastDirection: { x: 1, y: 0, angle: 0 }
+    lastDirection: { x: -1, y: 0, angle: 0 }
 };
 
 let player2 = {
@@ -37,6 +48,11 @@ let player2 = {
     y: GAME_HEIGHT / 2,
     hp: PLAYER_MAX_HP,
     energy: 0,
+    damage: 10,
+    projectileSpeed: 1,
+    bulletSize: 10,
+    bulletCount: 1, // New property
+    speed: 5,
     lastShot: 0,
     superpower: false,
     superpowerEndTime: 0,
@@ -53,6 +69,42 @@ let projectiles = [];
 let walls = [];
 let gameOver = false;
 let gameLoopId = null;
+
+const DROP_TYPES = [
+    { type: 'bigger-bullets', icon: 'assets/atk_big.png', effect: (player) => player.bulletSize += 10 },
+    { type: 'faster-projectile', icon: 'assets/atk_speed.png', effect: (player) => player.projectileSpeed += 3 },
+    { type: 'fast-movement', icon: 'assets/move_fast.png', effect: (player) => player.speed += 5 },
+    { type: 'bigger-damage', icon: 'assets/big_damage.png', effect: (player) => player.damage += 10 },
+    { type: 'bullet-multiplier', icon: 'assets/add_bullet.png', effect: (player) => player.bulletCount += 1 },
+    { type: 'heal', icon: 'assets/heal.png', effect: (player) => player.hp = Math.min(PLAYER_MAX_HP, player.hp + 100) },
+    { type: 'curse', icon: 'assets/cursed.png', effect: (player) => player.speed = Math.max(1, player.speed - 50) },
+
+    {
+        type: 'shield',
+        icon: 'assets/shield.png',
+        effect: (player) => {
+            player.shield = 500; // Set shield to absorb 500 damage
+            const shieldElement = document.createElement('div');
+            shieldElement.className = 'player-shield';
+            shieldElement.style.position = 'absolute';
+            shieldElement.style.width = PLAYER_SIZE + 20 + 'px';
+            shieldElement.style.height = PLAYER_SIZE + 20 + 'px';
+            shieldElement.style.borderRadius = '50%';
+            shieldElement.style.border = '3px solid gold';
+            shieldElement.style.opacity = '0.5';
+            shieldElement.style.pointerEvents = 'none';
+            shieldElement.style.left = player.x - 10 + 'px';
+            shieldElement.style.top = player.y - 10 + 'px';
+            shieldElement.id = player === player1 ? 'player1-shield' : 'player2-shield';
+
+            // Remove any existing shield element
+            const existingShield = document.getElementById(shieldElement.id);
+            if (existingShield) existingShield.remove();
+
+            document.getElementById('game-container').appendChild(shieldElement);
+        }
+    }
+];
 
 // DOM elements
 const gameContainer = document.getElementById('game-container');
@@ -76,6 +128,11 @@ function initGame() {
         gameLoopId = null; // Reset the game loop ID
     }
 
+    // Set default images if no upload
+    // setDefaultImages();
+    // Add arrows to players
+    addArrowToPlayers();
+
     // Reset players
     player1.x = 0;
     player1.y = GAME_HEIGHT / 2;
@@ -84,7 +141,9 @@ function initGame() {
     player1.superpower = false;
     player1.superpowerEndTime = 0;
     player1.movement = { up: false, down: false, left: false, right: false };
-    player1.lastDirection = { x: 0, y: -1 };
+    player1.lastDirection = { x: 0, y: -1, angle: 270 };
+    player1.element = player1Element;
+    player1Element.style.transform = `rotate(${player1.lastDirection.angle}deg)`;
 
     player2.x = GAME_WIDTH - 40;
     player2.y = GAME_HEIGHT / 2;
@@ -93,7 +152,9 @@ function initGame() {
     player2.superpower = false;
     player2.superpowerEndTime = 0;
     player2.movement = { up: false, down: false, left: false, right: false };
-    player2.lastDirection = { x: 0, y: -1 };
+    player2.lastDirection = { x: 0, y: -1,angle: 270 };
+    player2.element = player2Element;
+    player2Element.style.transform = `rotate(${player2.lastDirection.angle}deg)`;
 
     // Clear projectiles
     projectiles.forEach(projectile => {
@@ -213,6 +274,64 @@ function updateUI() {
     player2Element.style.left = player2.x + 'px';
     player2Element.style.top = player2.y + 'px';
 
+    // Update shield positions
+    const player1Shield = document.getElementById('player1-shield');
+    if (player1Shield) {
+        player1Shield.style.left = player1.x - 10 + 'px';
+        player1Shield.style.top = player1.y - 10 + 'px';
+    }
+
+    const player2Shield = document.getElementById('player2-shield');
+    if (player2Shield) {
+        player2Shield.style.left = player2.x - 10 + 'px';
+        player2Shield.style.top = player2.y - 10 + 'px';
+    }
+
+    // Update shield bars
+    const player1ShieldBar = document.querySelector('#player1-status .shield-bar');
+    const player2ShieldBar = document.querySelector('#player2-status .shield-bar');
+
+    if (player1.shield > 0) {
+        player1ShieldBar.style.width = (player1.shield / 500) * 100 + '%'; // Scale shield to 100%
+    } else {
+        player1ShieldBar.style.width = '0%'; // Empty bar if no shield
+    }
+
+    if (player2.shield > 0) {
+        player2ShieldBar.style.width = (player2.shield / 500) * 100 + '%'; // Scale shield to 100%
+    } else {
+        player2ShieldBar.style.width = '0%'; // Empty bar if no shield
+    }
+
+    // Check for collisions with drops
+    drops = drops.filter((drop) => {
+        const dropBox = {
+            x: parseFloat(drop.element.style.left),
+            y: parseFloat(drop.element.style.top),
+            width: 20,
+            height: 20
+        };
+
+        const player1Box = { x: player1.x, y: player1.y, width: PLAYER_SIZE, height: PLAYER_SIZE };
+        const player2Box = { x: player2.x, y: player2.y, width: PLAYER_SIZE, height: PLAYER_SIZE };
+
+        if (checkCollision(dropBox, player1Box)) {
+            drop.effect(player1); // Apply the drop effect to Player 1
+            drop.element.remove();
+            updatePlayerStats(); // Update stats display
+            return false; // Remove the drop from the array
+        }
+
+        if (checkCollision(dropBox, player2Box)) {
+            drop.effect(player2); // Apply the drop effect to Player 2
+            drop.element.remove();
+            updatePlayerStats(); // Update stats display
+            return false; // Remove the drop from the array
+        }
+
+        return true; // Keep the drop if no collision
+    });
+
     // Update HP bars
     player1HP.style.width = (player1.hp / PLAYER_MAX_HP * 100) + '%';
     player2HP.style.width = (player2.hp / PLAYER_MAX_HP * 100) + '%';
@@ -220,6 +339,18 @@ function updateUI() {
     // Update energy bars
     player1Energy.style.width = player1.energy + '%';
     player2Energy.style.width = player2.energy + '%';
+
+    // Add glow effect to energy bars when full
+    if (player1.energy >= 100) {
+        player1Energy.classList.add('energy-full');
+    } else {
+        player1Energy.classList.remove('energy-full');
+    }
+    if (player2.energy >= 100) {
+        player2Energy.classList.add('energy-full');
+    } else {
+        player2Energy.classList.remove('energy-full');
+    }
 
     // Update superpower visual effects
     if (player1.superpower) {
@@ -232,6 +363,47 @@ function updateUI() {
         player2Element.classList.add('superpower-active');
     } else {
         player2Element.classList.remove('superpower-active');
+    }
+
+    // // Rotate the arrow to indicate direction
+    // const player1Arrow = player1Element.querySelector('.player-arrow');
+    // const player2Arrow = player2Element.querySelector('.player-arrow');
+    // if (player1Arrow) {
+    //     player1Arrow.style.transform = `rotate(${player1.lastDirection.angle}deg)`;
+    // }
+    // if (player2Arrow) {
+    //     player2Arrow.style.transform = `rotate(${player2.lastDirection.angle}deg)`;
+    // }
+}
+
+//stats changes
+function updatePlayerStats() {
+    // Update Player 1 stats
+    document.getElementById('player1-damage').textContent = player1.damage;
+    document.getElementById('player1-speed').textContent = player1.projectileSpeed;
+    document.getElementById('player1-bullet-size').textContent = player1.bulletSize;
+    document.getElementById('player1-bullet-count').textContent = player1.bulletCount;
+    document.getElementById('player1-movement-speed').textContent = player1.speed;
+
+    // Update Player 2 stats
+    document.getElementById('player2-damage').textContent = player2.damage;
+    document.getElementById('player2-speed').textContent = player2.projectileSpeed;
+    document.getElementById('player2-bullet-size').textContent = player2.bulletSize;
+    document.getElementById('player2-bullet-count').textContent = player2.bulletCount;
+    document.getElementById('player2-movement-speed').textContent = player2.speed;
+}
+
+// Handle superpower expiration
+function handleSuperpowerExpiration() {
+    if (player1.superpower && Date.now() > player1.superpowerEndTime) {
+        player1.superpower = false;
+        player1Element.classList.remove('superpower-active'); // Remove class for superpower
+        player1Element.style.transform = `rotate(${player1.lastDirection.angle}deg)`; // Preserve rotation
+    }
+    if (player2.superpower && Date.now() > player2.superpowerEndTime) {
+        player2.superpower = false;
+        player2Element.classList.remove('superpower-active'); // Remove class for superpower
+        player2Element.style.transform = `rotate(${player2.lastDirection.angle}deg)`; // Preserve rotation
     }
 }
 
@@ -246,19 +418,22 @@ function checkCollision(obj1, obj2) {
 }
 
 // Create a projectile
-function createProjectile(x, y, directionX, directionY, isPlayer1) {
+function createProjectile(x, y, directionX, directionY, isPlayer1, size, damage) {
     const projectile = {
         x: x,
         y: y,
-        width: PROJECTILE_SIZE,
-        height: PROJECTILE_SIZE,
+        width: size || PROJECTILE_SIZE,
+        height: size || PROJECTILE_SIZE,
         directionX: directionX,
         directionY: directionY,
         isPlayer1: isPlayer1,
+        damage: damage || PROJECTILE_DAMAGE,
         element: document.createElement('div')
     };
 
     projectile.element.className = 'projectile ' + (isPlayer1 ? 'player1-projectile' : 'player2-projectile');
+    projectile.element.style.width = projectile.width + 'px';
+    projectile.element.style.height = projectile.height + 'px';
     projectile.element.style.left = projectile.x + 'px';
     projectile.element.style.top = projectile.y + 'px';
 
@@ -268,118 +443,10 @@ function createProjectile(x, y, directionX, directionY, isPlayer1) {
     return projectile;
 }
 
-// Move players based on input
-
-// function movePlayers() {
-//     try {
-//         // Validate player1 angle
-//         if (typeof player1.lastDirection.angle !== 'number') {
-//             player1.lastDirection.angle = 0;
-//         }
-
-//         // Validate player2 angle
-//         if (typeof player2.lastDirection.angle !== 'number') {
-//             player2.lastDirection.angle = 0;
-//         }
-
-//         // Player 1 movement
-//         let newX1 = player1.x;
-//         let newY1 = player1.y;
-
-//         if (player1.movement.left) {
-//             player1.lastDirection.angle = (player1.lastDirection.angle - 5 + 360) % 360;
-//         }
-//         if (player1.movement.right) {
-//             player1.lastDirection.angle = (player1.lastDirection.angle + 5) % 360;
-//         }
-
-//         if (player1.movement.up) {
-//             newX1 += Math.cos((player1.lastDirection.angle * Math.PI) / 180) * PLAYER_SPEED;
-//             newY1 += Math.sin((player1.lastDirection.angle * Math.PI) / 180) * PLAYER_SPEED;
-//         }
-//         if (player1.movement.down) {
-//             newX1 -= Math.cos((player1.lastDirection.angle * Math.PI) / 180) * PLAYER_SPEED;
-//             newY1 -= Math.sin((player1.lastDirection.angle * Math.PI) / 180) * PLAYER_SPEED;
-//         }
-
-//         // Player 2 movement
-//         let newX2 = player2.x;
-//         let newY2 = player2.y;
-
-//         if (player2.movement.left) {
-//             player2.lastDirection.angle = (player2.lastDirection.angle - 5 + 360) % 360;
-//         }
-//         if (player2.movement.right) {
-//             player2.lastDirection.angle = (player2.lastDirection.angle + 5) % 360;
-//         }
-
-//         if (player2.movement.up) {
-//             newX2 += Math.cos((player2.lastDirection.angle * Math.PI) / 180) * PLAYER_SPEED;
-//             newY2 += Math.sin((player2.lastDirection.angle * Math.PI) / 180) * PLAYER_SPEED;
-//         }
-//         if (player2.movement.down) {
-//             newX2 -= Math.cos((player2.lastDirection.angle * Math.PI) / 180) * PLAYER_SPEED;
-//             newY2 -= Math.sin((player2.lastDirection.angle * Math.PI) / 180) * PLAYER_SPEED;
-//         }
-
-//         // Boundary checks
-//         newX1 = Math.max(0, Math.min(GAME_WIDTH - PLAYER_SIZE, newX1));
-//         newY1 = Math.max(0, Math.min(GAME_HEIGHT - PLAYER_SIZE, newY1));
-
-//         newX2 = Math.max(0, Math.min(GAME_WIDTH - PLAYER_SIZE, newX2));
-//         newY2 = Math.max(0, Math.min(GAME_HEIGHT - PLAYER_SIZE, newY2));
-
-//         const player1Box = { x: newX1, y: newY1, width: PLAYER_SIZE, height: PLAYER_SIZE };
-//         const player2Box = { x: newX2, y: newY2, width: PLAYER_SIZE, height: PLAYER_SIZE };
-
-//         let player1Colliding = false;
-//         let player2Colliding = false;
-
-//         for (const wall of walls) {
-//             if (checkCollision(player1Box, wall)) {
-//                 player1Colliding = true;
-//             }
-//             if (checkCollision(player2Box, wall)) {
-//                 player2Colliding = true;
-//             }
-//         }
-
-//         // Prevent players from overlapping
-//         if (checkCollision(player1Box, player2Box)) {
-//             if (player1.movement.up || player1.movement.down) {
-//                 newX1 = player1.x;
-//                 newY1 = player1.y;
-//             }
-//             if (player2.movement.up || player2.movement.down) {
-//                 newX2 = player2.x;
-//                 newY2 = player2.y;
-//             }
-//         }
-
-//         // Apply movement only if not colliding
-//         if (!player1Colliding) {
-//             player1.x = newX1;
-//             player1.y = newY1;
-//         }
-
-//         if (!player2Colliding) {
-//             player2.x = newX2;
-//             player2.y = newY2;
-//         }
-
-//         // Apply rotation
-//         player1Element.style.transform = `rotate(${player1.lastDirection.angle}deg)`;
-//         player2Element.style.transform = `rotate(${player2.lastDirection.angle}deg)`;
-
-//     } catch (e) {
-//         console.error("Error in movePlayers:", e);
-//     }
-// }
-
 function movePlayers() {
     try {
-        if (typeof player1.lastDirection.angle !== 'number') player1.lastDirection.angle = 0;
-        if (typeof player2.lastDirection.angle !== 'number') player2.lastDirection.angle = 0;
+        if (typeof player1.lastDirection.angle !== 'number') player1.lastDirection.angle = 270;
+        if (typeof player2.lastDirection.angle !== 'number') player2.lastDirection.angle = 270;
 
         // Player 1 rotation
         if (player1.movement.left) player1.lastDirection.angle = (player1.lastDirection.angle - 5 + 360) % 360;
@@ -389,92 +456,94 @@ function movePlayers() {
         if (player2.movement.left) player2.lastDirection.angle = (player2.lastDirection.angle - 5 + 360) % 360;
         if (player2.movement.right) player2.lastDirection.angle = (player2.lastDirection.angle + 5) % 360;
 
-        // Calculate deltas
+        // Calculate movement deltas based on player speed
         const rad1 = (player1.lastDirection.angle * Math.PI) / 180;
-        const dx1 = Math.cos(rad1) * PLAYER_SPEED;
-        const dy1 = Math.sin(rad1) * PLAYER_SPEED;
+        const dx1 = Math.cos(rad1) * player1.speed;
+        const dy1 = Math.sin(rad1) * player1.speed;
 
         const rad2 = (player2.lastDirection.angle * Math.PI) / 180;
-        const dx2 = Math.cos(rad2) * PLAYER_SPEED;
-        const dy2 = Math.sin(rad2) * PLAYER_SPEED;
+        const dx2 = Math.cos(rad2) * player2.speed;
+        const dy2 = Math.sin(rad2) * player2.speed;
 
-        // Move Player 1 - X Axis
-        let tempX1 = player1.x;
-        if (player1.movement.up) tempX1 += dx1;
-        if (player1.movement.down) tempX1 -= dx1;
+        // Try moving players separately to prevent overlap
+        function movePlayer(player, dx, dy) {
+            let newX = player.x + dx;
+            let newY = player.y + dy;
 
-        let collisionX1 = false;
-        const tempBoxX1 = { x: tempX1, y: player1.y, width: PLAYER_SIZE, height: PLAYER_SIZE };
-        for (const wall of walls) {
-            if (!wall.isDestroyed && checkCollision(tempBoxX1, wall)) {
-                collisionX1 = true;
-                break;
+            let canMoveX = true, canMoveY = true;
+            const tempBoxX = { x: newX, y: player.y, width: PLAYER_SIZE, height: PLAYER_SIZE };
+            const tempBoxY = { x: player.x, y: newY, width: PLAYER_SIZE, height: PLAYER_SIZE };
+
+            for (const wall of walls) {
+                if (!wall.isDestroyed) {
+                    if (checkCollision(tempBoxX, wall)) canMoveX = false;
+                    if (checkCollision(tempBoxY, wall)) canMoveY = false;
+                }
+            }
+
+            if (canMoveX) player.x = newX;
+            if (canMoveY) player.y = newY;
+
+            // Clamp inside boundaries
+            player.x = Math.max(0, Math.min(GAME_WIDTH - PLAYER_SIZE, player.x));
+            player.y = Math.max(0, Math.min(GAME_HEIGHT - PLAYER_SIZE, player.y));
+        }
+
+        if (player1.movement.up) movePlayer(player1, dx1, dy1);
+        if (player1.movement.down) movePlayer(player1, -dx1, -dy1);
+        if (player2.movement.up) movePlayer(player2, dx2, dy2);
+        if (player2.movement.down) movePlayer(player2, -dx2, -dy2);
+
+        // Prevent players from overlapping each other
+        function separatePlayers() {
+            const player1Box = { x: player1.x, y: player1.y, width: PLAYER_SIZE, height: PLAYER_SIZE };
+            const player2Box = { x: player2.x, y: player2.y, width: PLAYER_SIZE, height: PLAYER_SIZE };
+
+            if (checkCollision(player1Box, player2Box)) {
+                const deltaX = player2.x - player1.x;
+                const deltaY = player2.y - player1.y;
+                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY) || 1;
+
+                const pushAmount = 2;
+                let newX1 = player1.x - (deltaX / distance) * pushAmount;
+                let newY1 = player1.y - (deltaY / distance) * pushAmount;
+                let newX2 = player2.x + (deltaX / distance) * pushAmount;
+                let newY2 = player2.y + (deltaY / distance) * pushAmount;
+
+                // Check if pushing player 1 into a wall
+                let canMoveP1 = true;
+                const tempBoxP1 = { x: newX1, y: newY1, width: PLAYER_SIZE, height: PLAYER_SIZE };
+                for (const wall of walls) {
+                    if (!wall.isDestroyed && checkCollision(tempBoxP1, wall)) {
+                        canMoveP1 = false;
+                        break;
+                    }
+                }
+                if (canMoveP1) {
+                    player1.x = newX1;
+                    player1.y = newY1;
+                }
+
+                // Check if pushing player 2 into a wall
+                let canMoveP2 = true;
+                const tempBoxP2 = { x: newX2, y: newY2, width: PLAYER_SIZE, height: PLAYER_SIZE };
+                for (const wall of walls) {
+                    if (!wall.isDestroyed && checkCollision(tempBoxP2, wall)) {
+                        canMoveP2 = false;
+                        break;
+                    }
+                }
+                if (canMoveP2) {
+                    player2.x = newX2;
+                    player2.y = newY2;
+                }
+
+                // Re-check wall collisions after separation
+                movePlayer(player1, 0, 0);
+                movePlayer(player2, 0, 0);
             }
         }
-        if (!collisionX1) player1.x = tempX1;
-
-        // Move Player 1 - Y Axis
-        let tempY1 = player1.y;
-        if (player1.movement.up) tempY1 += dy1;
-        if (player1.movement.down) tempY1 -= dy1;
-
-        let collisionY1 = false;
-        const tempBoxY1 = { x: player1.x, y: tempY1, width: PLAYER_SIZE, height: PLAYER_SIZE };
-        for (const wall of walls) {
-            if (!wall.isDestroyed && checkCollision(tempBoxY1, wall)) {
-                collisionY1 = true;
-                break;
-            }
-        }
-        if (!collisionY1) player1.y = tempY1;
-
-        // Clamp Player 1 inside boundaries
-        player1.x = Math.max(0, Math.min(GAME_WIDTH - PLAYER_SIZE, player1.x));
-        player1.y = Math.max(0, Math.min(GAME_HEIGHT - PLAYER_SIZE, player1.y));
-
-        // === Repeat for Player 2 ===
-
-        let tempX2 = player2.x;
-        if (player2.movement.up) tempX2 += dx2;
-        if (player2.movement.down) tempX2 -= dx2;
-
-        let collisionX2 = false;
-        const tempBoxX2 = { x: tempX2, y: player2.y, width: PLAYER_SIZE, height: PLAYER_SIZE };
-        for (const wall of walls) {
-            if (!wall.isDestroyed && checkCollision(tempBoxX2, wall)) {
-                collisionX2 = true;
-                break;
-            }
-        }
-        if (!collisionX2) player2.x = tempX2;
-
-        let tempY2 = player2.y;
-        if (player2.movement.up) tempY2 += dy2;
-        if (player2.movement.down) tempY2 -= dy2;
-
-        let collisionY2 = false;
-        const tempBoxY2 = { x: player2.x, y: tempY2, width: PLAYER_SIZE, height: PLAYER_SIZE };
-        for (const wall of walls) {
-            if (!wall.isDestroyed && checkCollision(tempBoxY2, wall)) {
-                collisionY2 = true;
-                break;
-            }
-        }
-        if (!collisionY2) player2.y = tempY2;
-
-        // Clamp Player 2 inside boundaries
-        player2.x = Math.max(0, Math.min(GAME_WIDTH - PLAYER_SIZE, player2.x));
-        player2.y = Math.max(0, Math.min(GAME_HEIGHT - PLAYER_SIZE, player2.y));
-
-        // Prevent overlapping each other
-        const player1Box = { x: player1.x, y: player1.y, width: PLAYER_SIZE, height: PLAYER_SIZE };
-        const player2Box = { x: player2.x, y: player2.y, width: PLAYER_SIZE, height: PLAYER_SIZE };
-        if (checkCollision(player1Box, player2Box)) {
-            player1.x -= dx1;
-            player1.y -= dy1;
-            player2.x -= dx2;
-            player2.y -= dy2;
-        }
+        separatePlayers();
 
         // Apply rotation visually
         player1Element.style.transform = `rotate(${player1.lastDirection.angle}deg)`;
@@ -487,180 +556,12 @@ function movePlayers() {
 
 
 
-// Fire projectiles
-// function fireProjectiles() {
-//     const currentTime = Date.now();
-
-//     // Player 1 firing
-//     if (currentTime - player1.lastShot > FIRE_RATE) {
-//         if (player1.superpower) {
-//             // Player 1 Superpower: Vine Attack
-//             const vineProjectile = document.createElement('div');
-//             vineProjectile.className = 'vine-projectile';
-
-//             // Set the initial position of the vine projectile relative to the player
-//             let vineX = player1.x + PLAYER_SIZE / 2 - 100; // Center horizontally
-//             let vineY = player1.y + PLAYER_SIZE / 2 - 50; // Center vertically
-
-//             // Adjust position based on firing direction
-//             if (player1.lastDirection.x === 1) {
-//                 // Firing right
-//                 vineProjectile.style.transform = 'rotate(180deg)';
-//             } else if (player1.lastDirection.x === -1) {
-//                 // Firing left
-//                 vineProjectile.style.transform = 'rotate(0deg)';
-//             } else if (player1.lastDirection.y === -1) {
-//                 // Firing up
-//                 vineProjectile.style.transform = 'rotate(90deg)';
-//             } else if (player1.lastDirection.y === 1) {
-//                 // Firing down
-//                 vineProjectile.style.transform = 'rotate(-90deg)';
-//             }
-
-//             // Ensure the projectile stays within the game container
-//             vineX = Math.max(0, Math.min(GAME_WIDTH - 100, vineX));
-//             vineY = Math.max(0, Math.min(GAME_HEIGHT - 100, vineY));
-
-//             vineProjectile.style.left = vineX + 'px';
-//             vineProjectile.style.top = vineY + 'px';
-
-//             gameContainer.appendChild(vineProjectile);
-
-//             projectiles.push({
-//                 element: vineProjectile,
-//                 x: vineX,
-//                 y: vineY,
-//                 width: 100,
-//                 height: 100,
-//                 directionX: player1.lastDirection.x,
-//                 directionY: player1.lastDirection.y,
-//                 isPlayer1: true,
-//                 isSuperpower: true,
-//                 damage: 35
-//             });
-
-//             // Fire the second vine projectile after a short delay
-//             setTimeout(() => {
-//                 // Player 2 Superpower: Rocket Attack
-//                 const vineProjectile = document.createElement('div');
-//                 vineProjectile.className = 'vine-projectile';
-
-//                 // Set the initial position of the vine projectile relative to the player
-//                 let vineX = player1.x + PLAYER_SIZE / 2 - 100; // Center horizontally
-//                 let vineY = player1.y + PLAYER_SIZE / 2 - 50; // Center vertically
-
-//                 // Adjust position based on firing direction
-//                 if (player1.lastDirection.x === 1) {
-//                     // Firing right
-//                     vineProjectile.style.transform = 'rotate(180deg)';
-//                 } else if (player1.lastDirection.x === -1) {
-//                     // Firing left
-//                     vineProjectile.style.transform = 'rotate(0deg)';
-//                 } else if (player1.lastDirection.y === -1) {
-//                     // Firing up
-//                     vineProjectile.style.transform = 'rotate(90deg)';
-//                 } else if (player1.lastDirection.y === 1) {
-//                     // Firing down
-//                     vineProjectile.style.transform = 'rotate(-90deg)';
-//                 }
-
-//                 // Ensure the projectile stays within the game container
-//                 vineX = Math.max(0, Math.min(GAME_WIDTH - 100, vineX));
-//                 vineY = Math.max(0, Math.min(GAME_HEIGHT - 100, vineY));
-
-//                 vineProjectile.style.left = vineX + 'px';
-//                 vineProjectile.style.top = vineY + 'px';
-
-//                 gameContainer.appendChild(vineProjectile);
-
-//                 projectiles.push({
-//                     element: vineProjectile,
-//                     x: vineX,
-//                     y: vineY,
-//                     width: 100,
-//                     height: 100,
-//                     directionX: player1.lastDirection.x,
-//                     directionY: player1.lastDirection.y,
-//                     isPlayer1: true,
-//                     isSuperpower: true,
-//                     damage: 35
-//                 });
-//             }, 500);
-
-//             player1.superpower = false; // End superpower after firing
-//         } else if (!player1.superpower) {
-//             // Normal attack
-//             const projectileX = player1.x + PLAYER_SIZE / 2 - PROJECTILE_SIZE / 2;
-//             const projectileY = player1.y + PLAYER_SIZE / 2 - PROJECTILE_SIZE / 2;
-//             createProjectile(projectileX, projectileY, player1.lastDirection.x, player1.lastDirection.y, true);
-//         }
-//         player1.lastShot = currentTime;
-//     }
-
-//     // Player 2 firing
-//     if (currentTime - player2.lastShot > FIRE_RATE) {
-//         if (player2.superpower) {
-//             // Player 2 Superpower: Rocket Attack
-//             const rocketProjectile = document.createElement('div');
-//             rocketProjectile.className = 'rocket-projectile';
-
-//             // Set the initial position of the rocket projectile relative to the player
-//             let rocketX = player2.x + PLAYER_SIZE / 2 - 100; // Center horizontally
-//             let rocketY = player2.y + PLAYER_SIZE / 2 - 100; // Center vertically
-
-//             // Rotate the rocket based on the firing direction
-//             if (player2.lastDirection.x === 1) {
-//                 // Firing right
-//                 rocketProjectile.style.transform = 'rotate(180deg) scaleY(-1)';
-//             } else if (player2.lastDirection.x === -1) {
-//                 // Firing left
-//                 rocketProjectile.style.transform = 'rotate(0deg)';
-//             } else if (player2.lastDirection.y === -1) {
-//                 // Firing up
-//                 rocketProjectile.style.transform = 'rotate(90deg)';
-//             } else if (player2.lastDirection.y === 1) {
-//                 // Firing down
-//                 rocketProjectile.style.transform = 'rotate(-90deg)';
-//             }
-
-//             // Ensure the projectile stays within the game container
-//             rocketX = Math.max(0, Math.min(GAME_WIDTH - 200, rocketX));
-//             rocketY = Math.max(0, Math.min(GAME_HEIGHT - 200, rocketY));
-
-//             rocketProjectile.style.left = rocketX + 'px';
-//             rocketProjectile.style.top = rocketY + 'px';
-
-//             gameContainer.appendChild(rocketProjectile);
-
-//             projectiles.push({
-//                 element: rocketProjectile,
-//                 x: rocketX,
-//                 y: rocketY,
-//                 width: 200,
-//                 height: 200,
-//                 directionX: player2.lastDirection.x,
-//                 directionY: player2.lastDirection.y,
-//                 isPlayer1: false,
-//                 isSuperpower: true,
-//                 damage: 75
-//             });
-
-//             player2.superpower = false; // End superpower after firing
-//         } else if (!player2.superpower) {
-//             // Normal attack
-//             const projectileX = player2.x + PLAYER_SIZE / 2 - PROJECTILE_SIZE / 2;
-//             const projectileY = player2.y + PLAYER_SIZE / 2 - PROJECTILE_SIZE / 2;
-//             createProjectile(projectileX, projectileY, player2.lastDirection.x, player2.lastDirection.y, false);
-//         }
-//         player2.lastShot = currentTime;
-//     }
-// }
 
 function fireProjectiles() {
     const currentTime = Date.now();
 
     // Player 1 firing
-    if (currentTime - player1.lastShot > FIRE_RATE) {
+    if (currentTime - player1.lastShot > FIRE_RATE / player1.projectileSpeed) {
         if (player1.superpower) {
             // Player 1 Superpower: Vine Attack
             const vineProjectile = document.createElement('div');
@@ -728,17 +629,31 @@ function fireProjectiles() {
             }, 500);
 
             player1.superpower = false; // End superpower after firing
-        } else if (!player1.superpower) {
-            // Normal attack
-            const projectileX = player1.x + PLAYER_SIZE / 2 - PROJECTILE_SIZE / 2;
-            const projectileY = player1.y + PLAYER_SIZE / 2 - PROJECTILE_SIZE / 2;
-            createProjectile(projectileX, projectileY, Math.cos((player1.lastDirection.angle * Math.PI) / 180), Math.sin((player1.lastDirection.angle * Math.PI) / 180), true);
+        } else {
+            // Normal attack with buffs
+            for (let i = 0; i < player1.bulletCount; i++) {
+                const angleOffset = (i - Math.floor(player1.bulletCount / 2)) * 10; // Spread bullets
+                const angle = player1.lastDirection.angle + angleOffset;
+                const rad = (angle * Math.PI) / 180;
+
+                const projectileX = player1.x + PLAYER_SIZE / 2 - player1.bulletSize / 2;
+                const projectileY = player1.y + PLAYER_SIZE / 2 - player1.bulletSize / 2;
+                createProjectile(
+                    projectileX,
+                    projectileY,
+                    Math.cos(rad),
+                    Math.sin(rad),
+                    true,
+                    player1.bulletSize,
+                    player1.damage
+                );
+            }
         }
         player1.lastShot = currentTime;
     }
 
     // Player 2 firing
-    if (currentTime - player2.lastShot > FIRE_RATE) {
+    if (currentTime - player2.lastShot > FIRE_RATE / player2.projectileSpeed) {
         if (player2.superpower) {
             // Player 2 Superpower: Rocket Attack
             const rocketProjectile = document.createElement('div');
@@ -772,11 +687,25 @@ function fireProjectiles() {
             });
 
             player2.superpower = false; // End superpower after firing
-        } else if (!player2.superpower) {
-            // Normal attack
-            const projectileX = player2.x + PLAYER_SIZE / 2 - PROJECTILE_SIZE / 2;
-            const projectileY = player2.y + PLAYER_SIZE / 2 - PROJECTILE_SIZE / 2;
-            createProjectile(projectileX, projectileY, Math.cos((player2.lastDirection.angle * Math.PI) / 180), Math.sin((player2.lastDirection.angle * Math.PI) / 180), false);
+        } else {
+            // Normal attack with buffs
+            for (let i = 0; i < player2.bulletCount; i++) {
+                const angleOffset = (i - Math.floor(player2.bulletCount / 2)) * 10; // Spread bullets
+                const angle = player2.lastDirection.angle + angleOffset;
+                const rad = (angle * Math.PI) / 180;
+
+                const projectileX = player2.x + PLAYER_SIZE / 2 - player2.bulletSize / 2;
+                const projectileY = player2.y + PLAYER_SIZE / 2 - player2.bulletSize / 2;
+                createProjectile(
+                    projectileX,
+                    projectileY,
+                    Math.cos(rad),
+                    Math.sin(rad),
+                    false,
+                    player2.bulletSize,
+                    player2.damage
+                );
+            }
         }
         player2.lastShot = currentTime;
     }
@@ -812,6 +741,9 @@ function handleWallBreaking(wall, index, player, isSuperpowerProjectile) {
                     walls.splice(index, 1); // Remove from array
                 }
             }, 300); // Delay for animation
+
+            // Spawn shield drop
+            spawnShield(wall.x, wall.y);
         }
     } else {
         if (wall.hits === 1) {
@@ -836,10 +768,51 @@ function handleWallBreaking(wall, index, player, isSuperpowerProjectile) {
                     walls.splice(index, 1);
                 }
             }, 300);
+
+            // Spawn random drops
+            spawnDrops(wall.x, wall.y);
         }
     }
 }
 
+//drop spawn
+function spawnDrops(x, y) {
+    const dropChance = Math.random(); // Random chance for a drop
+    if (dropChance < 0.6) return; // 50% chance that no drop will spawn
+
+    // Select a random drop type
+    const filteredDrops = DROP_TYPES.filter(drop => drop.type !== 'shield');
+    const randomDrop = filteredDrops[Math.floor(Math.random() * filteredDrops.length)];
+    const dropElement = document.createElement('div');
+    dropElement.className = 'drop';
+    dropElement.style.backgroundImage = `url('${randomDrop.icon}')`;
+    dropElement.style.left = `${x + WALL_SIZE / 4}px`; // Center the drop on the wall
+    dropElement.style.top = `${y + WALL_SIZE / 4}px`;
+
+    gameContainer.appendChild(dropElement);
+
+    drops.push({
+        element: dropElement,
+        type: randomDrop.type,
+        effect: randomDrop.effect
+    });
+}
+
+function spawnShield(x, y) {
+    const dropElement = document.createElement('div');
+    dropElement.className = 'drop';
+    dropElement.style.backgroundImage = `url('assets/shield.png')`;
+    dropElement.style.left = `${x + WALL_SIZE / 4}px`; // Center the drop on the wall
+    dropElement.style.top = `${y + WALL_SIZE / 4}px`;
+
+    gameContainer.appendChild(dropElement);
+
+    drops.push({
+        element: dropElement,
+        type: 'shield',
+        effect: DROP_TYPES.find(drop => drop.type === 'shield').effect
+    });
+}
 
 // Update projectiles (continued)
 function updateProjectiles() {
@@ -891,20 +864,41 @@ function updateProjectiles() {
         };
 
         if (checkCollision(projectile, targetBox)) {
-            targetPlayer.hp -= projectile.damage || PROJECTILE_DAMAGE; // Use custom damage for superpowers
-            createHitEffect(targetPlayer.x + PLAYER_SIZE / 2, targetPlayer.y + PLAYER_SIZE / 2);
-
-            // Apply knockback if hit by a superpower
-            if (projectile.isSuperpower) {
-                applyKnockback(targetPlayer, projectile.directionX, projectile.directionY);
+            // Ensure superpower projectiles only hit once
+            if (projectile.isSuperpower && projectile.hasHit) {
+                continue; // Skip if this superpower projectile has already hit
             }
 
-            projectile.element.remove();
-            projectiles.splice(i, 1);
+            if (targetPlayer.shield > 0) {
+                targetPlayer.shield -= projectile.damage || PROJECTILE_DAMAGE;
 
-            // Check if the game is over
-            if (targetPlayer.hp <= 0) {
-                endGame(projectile.isPlayer1 ? 'Player 1' : 'Player 2');
+                // Remove shield if it reaches 0
+                if (targetPlayer.shield <= 0) {
+                    const shieldElement = document.getElementById(targetPlayer === player1 ? 'player1-shield' : 'player2-shield');
+                    if (shieldElement) shieldElement.remove();
+                }
+            } else {
+                targetPlayer.hp -= projectile.damage || PROJECTILE_DAMAGE; // Use custom damage for superpowers
+                createHitEffect(targetPlayer.x + PLAYER_SIZE / 2, targetPlayer.y + PLAYER_SIZE / 2);
+
+                // Apply knockback if hit by a superpower
+                if (projectile.isSuperpower) {
+                    applyKnockback(targetPlayer, projectile.directionX, projectile.directionY);
+                }
+
+                // Check if the game is over
+                if (targetPlayer.hp <= 0) {
+                    endGame(projectile.isPlayer1 ? 'Player 1' : 'Player 2');
+                }
+            }
+
+            // Mark superpower projectiles as having hit
+            if (projectile.isSuperpower) {
+                projectile.hasHit = true; // Prevent further damage or knockback
+            } else {
+                // For normal projectiles, remove them on collision
+                projectile.element.remove();
+                projectiles.splice(i, 1);
             }
         }
     }
@@ -967,11 +961,110 @@ function activateSuperpower(player) {
         player.superpower = true;
         player.superpowerEndTime = Date.now() + SUPERPOWER_DURATION;
         player.energy = 0;
+
+        player.element.classList.add('superpower-active');
+    }
+}
+
+// Handle image uploads
+// Handle Player 1 image upload
+document.getElementById('player1-upload').addEventListener('click', () => {
+    const fileInput = document.getElementById('player1-image');
+    fileInput.click(); // Trigger the file input click
+});
+
+document.getElementById('player1-image').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    const uploadCircle = document.getElementById('player1-upload');
+
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const imageData = event.target.result;
+            player1Element.style.backgroundImage = `url('${imageData}')`;
+            player1Element.style.backgroundColor = 'transparent'; // Remove default color
+            uploadCircle.style.backgroundImage = `url('${imageData}')`;
+            uploadCircle.style.backgroundColor = 'transparent';
+
+            // Save the image data to localStorage
+            localStorage.setItem('player1Image', imageData);
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Handle Player 2 image upload
+document.getElementById('player2-upload').addEventListener('click', () => {
+    const fileInput = document.getElementById('player2-image');
+    fileInput.click(); // Trigger the file input click
+});
+
+document.getElementById('player2-image').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    const uploadCircle = document.getElementById('player2-upload');
+
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const imageData = event.target.result;
+            player2Element.style.backgroundImage = `url('${imageData}')`;
+            player2Element.style.backgroundColor = 'transparent'; // Remove default color
+            uploadCircle.style.backgroundImage = `url('${imageData}')`;
+            uploadCircle.style.backgroundColor = 'transparent';
+
+            // Save the image data to localStorage
+            localStorage.setItem('player2Image', imageData);
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Initialize default images
+function setDefaultImages() {
+    if (!defaultPlayer1Image) {
+        player1Element.style.backgroundImage = 'none';
+        player1Element.style.backgroundColor = defaultPlayer1Color;
+    } else {
+        player1Element.style.backgroundImage = `url('${defaultPlayer1Image}')`;
+        player1Element.style.backgroundColor = 'transparent';
+    }
+
+    if (!defaultPlayer2Image) {
+        player2Element.style.backgroundImage = 'none';
+        player2Element.style.backgroundColor = defaultPlayer2Color;
+    } else {
+        player2Element.style.backgroundImage = `url('${defaultPlayer2Image}')`;
+        player2Element.style.backgroundColor = 'transparent';
+    }
+}
+
+// Ensure only one arrow is created for each player
+function addArrowToPlayers() {
+    if (!player1Element.querySelector('.player-arrow')) {
+        const player1Arrow = document.createElement('div');
+        player1Arrow.className = 'player-arrow';
+        player1Element.appendChild(player1Arrow);
+    }
+
+    if (!player2Element.querySelector('.player-arrow')) {
+        const player2Arrow = document.createElement('div');
+        player2Arrow.className = 'player-arrow';
+        player2Element.appendChild(player2Arrow);
     }
 }
 
 // Handle keydown events
 document.addEventListener('keydown', (e) => {
+    // Handle F5 key to reset the game
+    if (e.key === '5') {
+        // e.preventDefault(); // Prevent the default browser reload behavior
+        // resetButton.disabled = true; // Disable the reset button temporarily
+        // initGame(); // Reset the game
+        // setTimeout(() => resetButton.disabled = false, 1000); // Prevent spam-clicking
+        // return;
+        location.reload();
+    }
+
     if (e.key === 'w' || e.key === 'W') player1.movement.up = true;
     if (e.key === 's' || e.key === 'S') player1.movement.down = true;
     if (e.key === 'a' || e.key === 'A') player1.movement.left = true;
@@ -983,6 +1076,8 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft') player2.movement.left = true;
     if (e.key === 'ArrowRight') player2.movement.right = true;
     if (e.key === 'Enter') activateSuperpower(player2);
+
+
 });
 
 // Handle keyup events
@@ -1006,23 +1101,15 @@ function gameLoop() {
     fireProjectiles();
     updateProjectiles();
     updateUI();
-
-    // Handle superpower expiration
-    if (player1.superpower && Date.now() > player1.superpowerEndTime) {
-        player1.superpower = false;
-    }
-    if (player2.superpower && Date.now() > player2.superpowerEndTime) {
-        player2.superpower = false;
-    }
+    handleSuperpowerExpiration();
 
     gameLoopId = requestAnimationFrame(gameLoop);
 }
 
 // Reset button functionality
 resetButton.addEventListener('click', () => {
-    resetButton.disabled = true;
-    initGame();
-    setTimeout(() => resetButton.disabled = false, 1000); // Prevent spam-clicking
+    localStorage.setItem('skipOverlay', 'true');
+    location.reload();
 });
 
 //start button functionality
@@ -1035,7 +1122,39 @@ startGameButton.addEventListener('click', () => {
     initGame(); // Initialize the game
 });
 
-playAgainButton.addEventListener('click', initGame);
+playAgainButton.addEventListener('click', () => {
+    localStorage.setItem('skipOverlay', 'true'); // Set a flag to skip the overlay
+    location.reload(); // Refresh the page
+});
+
+window.addEventListener('load', () => {
+    const skipOverlay = localStorage.getItem('skipOverlay');
+    const player1Image = localStorage.getItem('player1Image');
+    const player2Image = localStorage.getItem('player2Image');
+
+    // Load Player 1 image if it exists
+    if (player1Image) {
+        player1Element.style.backgroundImage = `url('${player1Image}')`;
+        player1Element.style.backgroundColor = 'transparent';
+        document.getElementById('player1-upload').style.backgroundImage = `url('${player1Image}')`;
+        document.getElementById('player1-upload').style.backgroundColor = 'transparent';
+    }
+
+    // Load Player 2 image if it exists
+    if (player2Image) {
+        player2Element.style.backgroundImage = `url('${player2Image}')`;
+        player2Element.style.backgroundColor = 'transparent';
+        document.getElementById('player2-upload').style.backgroundImage = `url('${player2Image}')`;
+        document.getElementById('player2-upload').style.backgroundColor = 'transparent';
+    }
+
+    if (skipOverlay === 'true') {
+        gameStartOverlay.style.display = 'none'; // Hide the overlay
+        gameStarted = true; // Set the game as started
+        localStorage.removeItem('skipOverlay'); // Clear the flag
+        initGame(); // Initialize the game
+    }
+});
 
 // Start the game
 initGame();
