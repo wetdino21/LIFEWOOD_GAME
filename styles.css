@@ -11,11 +11,11 @@ body {
     width: 1050px;
     height: 510px;
     margin: 100px auto;
-    background-image: url('assets/ground1.jpg');
+    /* background-image: url('assets/ground1.jpg'); */
     background-color: white;
     border: 4px solid #555;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-    /* overflow: hidden; */
+    overflow: hidden;
 }
 
 .player {
@@ -141,11 +141,13 @@ body {
 .player1-projectile {
     background-color: #8BC34A;
     box-shadow: 0 0 5px #8BC34A;
+    z-index: 10;
 }
 
 .player2-projectile {
-    background-color: #FF5722;
-    box-shadow: 0 0 5px #FF5722;
+    background-color: #a722ff;
+    box-shadow: 0 0 5px #a722ff;
+    z-index: 10;
 }
 
 
@@ -472,7 +474,7 @@ body {
     background-position: center;
     background-color: #0000005d;
     border: 0.5px solid gold;
-    z-index: 5;
+    z-index: 10;
     animation: drop-pulse 1s infinite alternate;
 }
 
@@ -488,6 +490,29 @@ body {
     }
 }
 
+/* Red pulse animation */
+@keyframes redPulse {
+    0% {
+        box-shadow: 0 0 10px 5px rgba(255, 0, 0, 0.5);
+    }
+
+    50% {
+        box-shadow: 0 0 20px 10px rgba(255, 0, 0, 0.8);
+    }
+
+    100% {
+        box-shadow: 0 0 10px 5px rgba(255, 0, 0, 0.5);
+    }
+}
+
+.cursed-effect {
+    animation: redPulse 1s infinite;
+    border: 2px solid rgba(255, 0, 0, 0.8);
+    /* Optional: Add a red border */
+    border-radius: 50%;
+    /* Optional: Make it circular */
+}
+
 .player-shield {
     position: absolute;
     border: 1px gold;
@@ -495,7 +520,7 @@ body {
     background-color: #ffd90079;
     opacity: 0.5;
     pointer-events: none;
-    z-index: 1;
+    z-index: 10;
 }
 
 .player-stats {
@@ -512,4 +537,242 @@ body {
 
 .player-stats li {
     margin: 2px 0;
+}
+
+#elevator {
+    position: absolute;
+    top: -1000px;
+    /* Start completely off-screen */
+    left: 100;
+    width: 200px;
+    height: 300px;
+    /* background-color: #333; */
+    border: 10px solid #555;
+    z-index: 9;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    overflow: hidden;
+    transform: translateX(-50%);
+    transition: top 3s ease-in-out;
+    /* Smooth animation for moving up/down */
+}
+
+#elevator-bg {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: #333;
+    display: flex;
+    z-index: 1;
+    /* Ensure doors are in front of players */
+}
+
+#elevator-doors {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    z-index: 21;
+    /* Ensure doors are in front of players */
+}
+
+.door {
+    position: absolute;
+    width: 50%;
+    height: 100%;
+    background-color: #666;
+    transition: transform 1s ease-in-out;
+    /* Smooth door opening/closing */
+}
+
+.left-door {
+    left: 0;
+    transform: translateX(0);
+}
+
+.right-door {
+    right: 0;
+    transform: translateX(0);
+}
+
+#floor-indicator {
+    position: absolute;
+    top: 10px;
+    font-size: 18px;
+    color: white;
+    text-align: center;
+    z-index: 30;
+    /* Ensure the floor indicator is visible */
+}
+
+/* #elevator.open .player {
+    z-index: 15; 
+}
+
+#elevator.closed .player {
+    z-index: 5; 
+} */
+
+.floor-container {
+    position: absolute;
+    width: 100%;
+    height: 7140px;
+    /* Enough height for 14 floors (510px each) */
+    top: -6630px;
+    transition: top 3s ease-in-out;
+    /* Smooth scrolling effect */
+    z-index: 0;
+    /* Ensure it stays behind other elements */
+}
+
+.floor {
+    width: 100%;
+    height: 510px;
+    /* Match the height of the game container */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: bold;
+    color: white;
+}
+
+#floor1 {
+    background-color: #000000;
+}
+
+/* Changed from white to black */
+#floor2 {
+    background-color: #004400;
+}
+
+/* Dark green */
+#floor3 {
+    background-color: #000088;
+}
+
+/* Dark blue */
+#floor4 {
+    background-color: #880044;
+}
+
+/* Dark pink */
+#floor5 {
+    background-color: #440088;
+}
+
+/* Dark purple */
+#floor6 {
+    background-color: #008888;
+}
+
+/* Dark cyan */
+#floor7 {
+    background-color: #888800;
+}
+
+/* Dark yellow */
+#floor8 {
+    background-color: #884400;
+}
+
+/* Dark orange */
+#floor9 {
+    background-color: #440088;
+}
+
+/* Dark violet */
+#floor10 {
+    background-color: #008844;
+}
+
+/* Dark teal */
+#floor11 {
+    background-color: #880000;
+}
+
+/* Dark red */
+#floor12 {
+    background-color: #008800;
+}
+
+/* Dark green */
+#floor13 {
+    background-color: #000088;
+}
+
+/* Dark blue */
+#floor14 {
+    background-color: #886600;
+}
+
+/* Dark gold */
+
+
+.enemy {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    background-color: purple;
+    border-radius: 50%;
+    z-index: 20;
+}
+
+/* .melee-attack {
+    position: absolute;
+    width: 10px;
+    height: 50px;
+    background-color: red;
+    border-radius: 5px;
+    transform-origin: top center;
+    animation: swing 0.3s ease-in-out;
+    z-index: 10;
+}
+
+@keyframes swing {
+    0% {
+        transform: rotate(-45deg);
+    }
+
+    50% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(45deg);
+    }
+} */
+
+.enemy-projectile {
+    background-color: red;
+    box-shadow: 0 0 5px red;
+    z-index: 10;
+}
+
+.enemy-sword {
+    position: absolute;
+    width: 10px;
+    height: 100px;
+    background-color: gold;
+    border-radius: 5px;
+    transform-origin: top center;
+    z-index: 20;
+}
+
+.melee-attack-active {
+    animation: swing 0.3s ease-in-out;
+}
+
+@keyframes swing {
+    0% {
+        transform: rotate(-45deg);
+    }
+    50% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(45deg);
+    }
 }

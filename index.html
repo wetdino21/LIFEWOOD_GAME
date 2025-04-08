@@ -10,6 +10,23 @@
 
 <body>
     <div id="game-container">
+        <div class="floor-container">
+            <div id="floor14" class="floor">Floor 14</div>
+            <div id="floor13" class="floor">Floor 13</div>
+            <div id="floor12" class="floor">Floor 12</div>
+            <div id="floor11" class="floor">Floor 11</div>
+            <div id="floor10" class="floor">Floor 10</div>
+            <div id="floor9" class="floor">Floor 9</div>
+            <div id="floor8" class="floor">Floor 8</div>
+            <div id="floor7" class="floor">Floor 7</div>
+            <div id="floor6" class="floor">Floor 6</div>
+            <div id="floor5" class="floor">Floor 5</div>
+            <div id="floor4" class="floor">Floor 4</div>
+            <div id="floor3" class="floor">Floor 3</div>
+            <div id="floor2" class="floor">Floor 2</div>
+            <div id="floor1" class="floor">Floor 1</div>
+        </div>
+
         <div id="player1" class="player" style="background-color: green;"></div>
         <div id="player2" class="player" style="background-color: red;"></div>
 
@@ -67,6 +84,22 @@
                     </ul>
                 </div>
             </div>
+        </div>
+
+        <div id="boss-stats" style="display: none;">
+            <h2 id="boss-name" style="color: red; text-align: center; margin: 0;">Boss Name</h2>
+            <div id="boss-hp-bar-container" style="width: 100%; height: 20px; background-color: #555; border-radius: 10px; margin: 10px auto;">
+                <div id="boss-hp-bar" style="width: 100%; height: 100%; background-color: red; border-radius: 10px;"></div>
+            </div>
+        </div>
+        
+        <div id="elevator">
+            <div id="elevator-bg"></div>
+            <div id="elevator-doors">
+                <div class="door left-door"></div>
+                <div class="door right-door"></div>
+            </div>
+            <div id="floor-indicator">Floor 1</div>
         </div>
 
         <button id="reset-button">Reset Game</button>

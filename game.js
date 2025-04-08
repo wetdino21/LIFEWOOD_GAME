@@ -8,7 +8,7 @@ const PROJECTILE_SIZE = 10;
 const PROJECTILE_SPEED = 7;
 const WALL_SIZE = 30;
 const WALL_HITS_TO_BREAK = 3;
-const PLAYER_MAX_HP = 1000;
+const PLAYER_MAX_HP = 5000;
 const ENERGY_GAIN_PER_WALL = 20;
 const PROJECTILE_DAMAGE = 10;
 const SUPERPOWER_DURATION = 3000; // 3 seconds
@@ -19,6 +19,29 @@ const defaultPlayer2Image = null; // No default image, use color
 const defaultPlayer1Color = 'green';
 const defaultPlayer2Color = 'red';
 let drops = [];
+let currentFloor = 1;
+let elevatorMoving = false;
+let playersAreFriends = false;
+let friendshipMessageShown = false;
+let enemies = [];
+
+const floors = [
+    { id: 1, enemies: 0 }, // Floor 1 has no enemies
+    // { id: 2, enemies: 1, type: 'boss', bossType: 'weak' },
+    { id: 2, enemies: 5, type: 'weak' }, // Floor 2 has weak enemies
+    { id: 3, enemies: 7, type: 'weak' }, // Floor 3 has weak enemies
+    { id: 4, enemies: 10, type: 'weak' }, // Floor 4 has weak enemies
+    { id: 5, enemies: 1, type: 'boss', bossType: 'weak' }, // Floor 5 has a weak boss
+    { id: 6, enemies: 8, type: 'midstrong' }, // Floor 6 has mid-strong enemies
+    { id: 7, enemies: 10, type: 'midstrong' }, // Floor 7 has mid-strong enemies
+    { id: 8, enemies: 12, type: 'midstrong' }, // Floor 8 has mid-strong enemies
+    { id: 9, enemies: 15, type: 'midstrong' }, // Floor 9 has mid-strong enemies
+    { id: 10, enemies: 1, type: 'boss', bossType: 'midstrong' }, // Floor 10 has a mid-strong boss
+    { id: 11, enemies: 10, type: 'strong' }, // Floor 11 has strong enemies
+    { id: 12, enemies: 12, type: 'strong' }, // Floor 12 has strong enemies
+    { id: 13, enemies: 15, type: 'boss', bossType: 'strong' }, // Floor 13 has a strong boss
+    { id: 14, enemies: 0, type: 'celebration' } // Floor 14 is a celebration floor
+];
 
 // Game state
 let player1 = {
@@ -28,8 +51,8 @@ let player1 = {
     energy: 0,
     damage: 10,
     projectileSpeed: 1,
-    bulletSize: 10,
-    bulletCount: 1, // New property
+    bulletSize: 50,
+    bulletCount: 5, // New property
     speed: 5,
     lastShot: 0,
     superpower: false,
@@ -71,14 +94,53 @@ let gameOver = false;
 let gameLoopId = null;
 
 const DROP_TYPES = [
-    { type: 'bigger-bullets', icon: 'assets/atk_big.png', effect: (player) => player.bulletSize += 10 },
-    { type: 'faster-projectile', icon: 'assets/atk_speed.png', effect: (player) => player.projectileSpeed += 3 },
-    { type: 'fast-movement', icon: 'assets/move_fast.png', effect: (player) => player.speed += 5 },
+    { type: 'bigger-bullets', icon: 'assets/atk_big.png', effect: (player) => player.bulletSize += 1 },
+    { type: 'faster-projectile', icon: 'assets/atk_speed.png', effect: (player) => player.projectileSpeed += 1 },
+    { type: 'fast-movement', icon: 'assets/move_fast.png', effect: (player) => player.speed += 1 },
     { type: 'bigger-damage', icon: 'assets/big_damage.png', effect: (player) => player.damage += 10 },
     { type: 'bullet-multiplier', icon: 'assets/add_bullet.png', effect: (player) => player.bulletCount += 1 },
-    { type: 'heal', icon: 'assets/heal.png', effect: (player) => player.hp = Math.min(PLAYER_MAX_HP, player.hp + 100) },
-    { type: 'curse', icon: 'assets/cursed.png', effect: (player) => player.speed = Math.max(1, player.speed - 50) },
+    { type: 'heal', icon: 'assets/heal.png', effect: (player) => player.hp = Math.min(PLAYER_MAX_HP, player.hp + 200) },
+    {
+        type: 'curse',
+        icon: 'assets/cursed.png',
+        effect: (player) => {
+            // Check if the player is already cursed
+            if (player.isCursed) {
+                clearTimeout(player.curseTimeout); // Cancel the previous curse timeout
+            } else {
+                // Store the original stats only if not already cursed
+                player.originalStats = {
+                    speed: player.speed,
+                    bulletCount: player.bulletCount,
+                    projectileSpeed: player.projectileSpeed,
+                    bulletSize: player.bulletSize
+                };
+            }
 
+            // Apply the curse effect
+            player.isCursed = true;
+            player.speed = Math.max(1, player.speed - 50); // Apply the curse effect
+            player.bulletCount = 1;
+            player.projectileSpeed = 0.5;
+            player.bulletSize = 5;
+
+            // Add the cursed effect class to the player's element
+            player.element.classList.add('cursed-effect');
+
+            // Revert the stats back to the original values after 10 seconds
+            player.curseTimeout = setTimeout(() => {
+                player.isCursed = false; // Remove the cursed status
+                player.speed = player.originalStats.speed;
+                player.bulletCount = player.originalStats.bulletCount;
+                player.projectileSpeed = player.originalStats.projectileSpeed;
+                player.bulletSize = player.originalStats.bulletSize;
+
+                // Remove the cursed effect class
+                player.element.classList.remove('cursed-effect');
+                updatePlayerStats(); // Update the stats display
+            }, 10000); // 10 seconds
+        }
+    },
     {
         type: 'shield',
         icon: 'assets/shield.png',
@@ -152,7 +214,7 @@ function initGame() {
     player2.superpower = false;
     player2.superpowerEndTime = 0;
     player2.movement = { up: false, down: false, left: false, right: false };
-    player2.lastDirection = { x: 0, y: -1,angle: 270 };
+    player2.lastDirection = { x: 0, y: -1, angle: 270 };
     player2.element = player2Element;
     player2Element.style.transform = `rotate(${player2.lastDirection.angle}deg)`;
 
@@ -184,6 +246,8 @@ function initGame() {
     // Clear hit effects
     const hitEffects = document.querySelectorAll('.hit-effect');
     hitEffects.forEach(effect => effect.remove());
+
+    showElevator();
 
     // Start game loop
     gameLoop();
@@ -418,7 +482,7 @@ function checkCollision(obj1, obj2) {
 }
 
 // Create a projectile
-function createProjectile(x, y, directionX, directionY, isPlayer1, size, damage) {
+function createProjectile(x, y, directionX, directionY, isPlayer1, size, damage, isEnemy = false) {
     const projectile = {
         x: x,
         y: y,
@@ -427,11 +491,18 @@ function createProjectile(x, y, directionX, directionY, isPlayer1, size, damage)
         directionX: directionX,
         directionY: directionY,
         isPlayer1: isPlayer1,
+        isEnemy: isEnemy,
         damage: damage || PROJECTILE_DAMAGE,
-        element: document.createElement('div')
+        element: document.createElement('div'),
+        sourceEnemy: null // Will be set for enemy projectiles
     };
 
-    projectile.element.className = 'projectile ' + (isPlayer1 ? 'player1-projectile' : 'player2-projectile');
+    if (isEnemy) {
+        projectile.element.className = 'projectile enemy-projectile';
+    } else {
+        projectile.element.className = 'projectile ' + (isPlayer1 ? 'player1-projectile' : 'player2-projectile');
+    }
+
     projectile.element.style.width = projectile.width + 'px';
     projectile.element.style.height = projectile.height + 'px';
     projectile.element.style.left = projectile.x + 'px';
@@ -465,7 +536,11 @@ function movePlayers() {
         const dx2 = Math.cos(rad2) * player2.speed;
         const dy2 = Math.sin(rad2) * player2.speed;
 
-        // Try moving players separately to prevent overlap
+        // Elevator collision logic
+        const elevator = document.getElementById('elevator');
+        const elevatorBounds = elevator.getBoundingClientRect();
+        const elevatorOpen = !elevator.classList.contains('closed'); // Check if elevator is open
+
         function movePlayer(player, dx, dy) {
             let newX = player.x + dx;
             let newY = player.y + dy;
@@ -474,10 +549,54 @@ function movePlayers() {
             const tempBoxX = { x: newX, y: player.y, width: PLAYER_SIZE, height: PLAYER_SIZE };
             const tempBoxY = { x: player.x, y: newY, width: PLAYER_SIZE, height: PLAYER_SIZE };
 
+            // Check collision with walls
             for (const wall of walls) {
                 if (!wall.isDestroyed) {
                     if (checkCollision(tempBoxX, wall)) canMoveX = false;
                     if (checkCollision(tempBoxY, wall)) canMoveY = false;
+                }
+            }
+
+            // Check collision with elevator
+            const playerBounds = player === player1
+                ? document.getElementById('player1').getBoundingClientRect()
+                : document.getElementById('player2').getBoundingClientRect();
+
+            if (
+                playerBounds.right + dx > elevatorBounds.left &&
+                playerBounds.left + dx < elevatorBounds.right &&
+                playerBounds.bottom + dy > elevatorBounds.top &&
+                playerBounds.top + dy < elevatorBounds.bottom
+            ) {
+                // Prevent movement through the left edge
+                if (playerBounds.left + dx < elevatorBounds.left) canMoveX = false;
+
+                // Prevent movement through the top edge
+                if (playerBounds.top + dy < elevatorBounds.top) canMoveY = false;
+
+                // Prevent movement through the bottom edge
+                if (playerBounds.bottom + dy > elevatorBounds.bottom) canMoveY = false;
+
+                // Allow entry only from the right side if the elevator is open
+                if (playerBounds.right + dx > elevatorBounds.left && playerBounds.left + dx < elevatorBounds.left) {
+                    if (!elevatorOpen) canMoveX = false; // Block entry if closed
+                }
+
+                // Prevent exiting from top, left, or bottom when inside the elevator
+                if (
+                    playerBounds.left >= elevatorBounds.left &&
+                    playerBounds.right <= elevatorBounds.right &&
+                    playerBounds.top >= elevatorBounds.top &&
+                    playerBounds.bottom <= elevatorBounds.bottom
+                ) {
+                    if (playerBounds.left + dx < elevatorBounds.left) canMoveX = false; // Block left movement
+                    if (playerBounds.top + dy < elevatorBounds.top) canMoveY = false; // Block upward movement
+                    if (playerBounds.bottom + dy > elevatorBounds.bottom) canMoveY = false; // Block downward movement
+
+                    // Allow exit only from the right side if the elevator is open
+                    if (!elevatorOpen && playerBounds.right + dx > elevatorBounds.right) {
+                        canMoveX = false; // Block exit if closed
+                    }
                 }
             }
 
@@ -548,64 +667,47 @@ function movePlayers() {
         // Apply rotation visually
         player1Element.style.transform = `rotate(${player1.lastDirection.angle}deg)`;
         player2Element.style.transform = `rotate(${player2.lastDirection.angle}deg)`;
-
     } catch (e) {
         console.error("Error in movePlayers:", e);
     }
 }
 
-
-
-
 function fireProjectiles() {
     const currentTime = Date.now();
 
+    // Check if both players are inside the elevator
+    const elevator = document.getElementById('elevator');
+    const elevatorBounds = elevator.getBoundingClientRect();
+
+    // Get player bounding boxes
+    const player1Bounds = document.getElementById('player1').getBoundingClientRect();
+    const player2Bounds = document.getElementById('player2').getBoundingClientRect();
+
+    // Check if players are inside the elevator area
+    const player1InsideElevator =
+        player1Bounds.left >= elevatorBounds.left && player1Bounds.right <= elevatorBounds.right &&
+        player1Bounds.top >= elevatorBounds.top && player1Bounds.bottom <= elevatorBounds.bottom;
+
+    const player2InsideElevator =
+        player2Bounds.left >= elevatorBounds.left && player2Bounds.right <= elevatorBounds.right &&
+        player2Bounds.top >= elevatorBounds.top && player2Bounds.bottom <= elevatorBounds.bottom;
+
     // Player 1 firing
-    if (currentTime - player1.lastShot > FIRE_RATE / player1.projectileSpeed) {
-        if (player1.superpower) {
-            // Player 1 Superpower: Vine Attack
-            const vineProjectile = document.createElement('div');
-            vineProjectile.className = 'vine-projectile';
-
-            // Set the initial position of the vine projectile relative to the player
-            let vineX = player1.x + PLAYER_SIZE / 2 - 100; // Center horizontally
-            let vineY = player1.y + PLAYER_SIZE / 2 - 50; // Center vertically
-
-            // Adjust position based on firing direction
-            vineProjectile.style.transform = `rotate(${player1.lastDirection.angle}deg) scaleX(-1)`;
-
-            // Ensure the projectile stays within the game container
-            vineX = Math.max(0, Math.min(GAME_WIDTH - 100, vineX));
-            vineY = Math.max(0, Math.min(GAME_HEIGHT - 100, vineY));
-
-            vineProjectile.style.left = vineX + 'px';
-            vineProjectile.style.top = vineY + 'px';
-
-            gameContainer.appendChild(vineProjectile);
-
-            projectiles.push({
-                element: vineProjectile,
-                x: vineX,
-                y: vineY,
-                width: 100,
-                height: 100,
-                directionX: Math.cos((player1.lastDirection.angle * Math.PI) / 180),
-                directionY: Math.sin((player1.lastDirection.angle * Math.PI) / 180),
-                isPlayer1: true,
-                isSuperpower: true,
-                damage: 35
-            });
-
-            // Fire the second vine projectile after a short delay
-            setTimeout(() => {
+    if (!player1InsideElevator) {
+        if (currentTime - player1.lastShot > FIRE_RATE / player1.projectileSpeed) {
+            if (player1.superpower) {
+                // Player 1 Superpower: Vine Attack
                 const vineProjectile = document.createElement('div');
                 vineProjectile.className = 'vine-projectile';
 
+                // Set the initial position of the vine projectile relative to the player
                 let vineX = player1.x + PLAYER_SIZE / 2 - 100; // Center horizontally
                 let vineY = player1.y + PLAYER_SIZE / 2 - 50; // Center vertically
 
+                // Adjust position based on firing direction
                 vineProjectile.style.transform = `rotate(${player1.lastDirection.angle}deg) scaleX(-1)`;
 
+                // Ensure the projectile stays within the game container
                 vineX = Math.max(0, Math.min(GAME_WIDTH - 100, vineX));
                 vineY = Math.max(0, Math.min(GAME_HEIGHT - 100, vineY));
 
@@ -626,88 +728,122 @@ function fireProjectiles() {
                     isSuperpower: true,
                     damage: 35
                 });
-            }, 500);
 
-            player1.superpower = false; // End superpower after firing
-        } else {
-            // Normal attack with buffs
-            for (let i = 0; i < player1.bulletCount; i++) {
-                const angleOffset = (i - Math.floor(player1.bulletCount / 2)) * 10; // Spread bullets
-                const angle = player1.lastDirection.angle + angleOffset;
-                const rad = (angle * Math.PI) / 180;
+                // Fire the second vine projectile after a short delay
+                setTimeout(() => {
+                    const vineProjectile = document.createElement('div');
+                    vineProjectile.className = 'vine-projectile';
 
-                const projectileX = player1.x + PLAYER_SIZE / 2 - player1.bulletSize / 2;
-                const projectileY = player1.y + PLAYER_SIZE / 2 - player1.bulletSize / 2;
-                createProjectile(
-                    projectileX,
-                    projectileY,
-                    Math.cos(rad),
-                    Math.sin(rad),
-                    true,
-                    player1.bulletSize,
-                    player1.damage
-                );
+                    let vineX = player1.x + PLAYER_SIZE / 2 - 100; // Center horizontally
+                    let vineY = player1.y + PLAYER_SIZE / 2 - 50; // Center vertically
+
+                    vineProjectile.style.transform = `rotate(${player1.lastDirection.angle}deg) scaleX(-1)`;
+
+                    vineX = Math.max(0, Math.min(GAME_WIDTH - 100, vineX));
+                    vineY = Math.max(0, Math.min(GAME_HEIGHT - 100, vineY));
+
+                    vineProjectile.style.left = vineX + 'px';
+                    vineProjectile.style.top = vineY + 'px';
+
+                    gameContainer.appendChild(vineProjectile);
+
+                    projectiles.push({
+                        element: vineProjectile,
+                        x: vineX,
+                        y: vineY,
+                        width: 100,
+                        height: 100,
+                        directionX: Math.cos((player1.lastDirection.angle * Math.PI) / 180),
+                        directionY: Math.sin((player1.lastDirection.angle * Math.PI) / 180),
+                        isPlayer1: true,
+                        isSuperpower: true,
+                        damage: 35
+                    });
+                }, 500);
+
+                player1.superpower = false; // End superpower after firing
+            } else {
+                // Normal attack with buffs
+                for (let i = 0; i < player1.bulletCount; i++) {
+                    const angleOffset = (i - Math.floor(player1.bulletCount / 2)) * 10; // Spread bullets
+                    const angle = player1.lastDirection.angle + angleOffset;
+                    const rad = (angle * Math.PI) / 180;
+
+                    const projectileX = player1.x + PLAYER_SIZE / 2 - player1.bulletSize / 2;
+                    const projectileY = player1.y + PLAYER_SIZE / 2 - player1.bulletSize / 2;
+                    createProjectile(
+                        projectileX,
+                        projectileY,
+                        Math.cos(rad),
+                        Math.sin(rad),
+                        true,
+                        player1.bulletSize,
+                        player1.damage
+                    );
+                }
             }
+            player1.lastShot = currentTime;
         }
-        player1.lastShot = currentTime;
     }
 
     // Player 2 firing
-    if (currentTime - player2.lastShot > FIRE_RATE / player2.projectileSpeed) {
-        if (player2.superpower) {
-            // Player 2 Superpower: Rocket Attack
-            const rocketProjectile = document.createElement('div');
-            rocketProjectile.className = 'rocket-projectile';
+    if (!player2InsideElevator) {
+        if (currentTime - player2.lastShot > FIRE_RATE / player2.projectileSpeed) {
+            if (player2.superpower) {
+                // Player 2 Superpower: Rocket Attack
+                const rocketProjectile = document.createElement('div');
+                rocketProjectile.className = 'rocket-projectile';
 
-            // Set the initial position of the rocket projectile relative to the player
-            let rocketX = player2.x + PLAYER_SIZE / 2 - 100; // Center horizontally
-            let rocketY = player2.y + PLAYER_SIZE / 2 - 100; // Center vertically
+                // Set the initial position of the rocket projectile relative to the player
+                let rocketX = player2.x + PLAYER_SIZE / 2 - 100; // Center horizontally
+                let rocketY = player2.y + PLAYER_SIZE / 2 - 100; // Center vertically
 
-            rocketProjectile.style.transform = `rotate(${player2.lastDirection.angle}deg) scaleX(-1)`;
+                rocketProjectile.style.transform = `rotate(${player2.lastDirection.angle}deg) scaleX(-1)`;
 
-            rocketX = Math.max(0, Math.min(GAME_WIDTH - 200, rocketX));
-            rocketY = Math.max(0, Math.min(GAME_HEIGHT - 200, rocketY));
+                rocketX = Math.max(0, Math.min(GAME_WIDTH - 200, rocketX));
+                rocketY = Math.max(0, Math.min(GAME_HEIGHT - 200, rocketY));
 
-            rocketProjectile.style.left = rocketX + 'px';
-            rocketProjectile.style.top = rocketY + 'px';
+                rocketProjectile.style.left = rocketX + 'px';
+                rocketProjectile.style.top = rocketY + 'px';
 
-            gameContainer.appendChild(rocketProjectile);
+                gameContainer.appendChild(rocketProjectile);
 
-            projectiles.push({
-                element: rocketProjectile,
-                x: rocketX,
-                y: rocketY,
-                width: 200,
-                height: 200,
-                directionX: Math.cos((player2.lastDirection.angle * Math.PI) / 180),
-                directionY: Math.sin((player2.lastDirection.angle * Math.PI) / 180),
-                isPlayer1: false,
-                isSuperpower: true,
-                damage: 75
-            });
+                projectiles.push({
+                    element: rocketProjectile,
+                    x: rocketX,
+                    y: rocketY,
+                    width: 200,
+                    height: 200,
+                    directionX: Math.cos((player2.lastDirection.angle * Math.PI) / 180),
+                    directionY: Math.sin((player2.lastDirection.angle * Math.PI) / 180),
+                    isPlayer1: false,
+                    isSuperpower: true,
+                    damage: 75
+                });
 
-            player2.superpower = false; // End superpower after firing
-        } else {
-            // Normal attack with buffs
-            for (let i = 0; i < player2.bulletCount; i++) {
-                const angleOffset = (i - Math.floor(player2.bulletCount / 2)) * 10; // Spread bullets
-                const angle = player2.lastDirection.angle + angleOffset;
-                const rad = (angle * Math.PI) / 180;
+                player2.superpower = false; // End superpower after firing
+            } else {
+                // Normal attack with buffs
+                for (let i = 0; i < player2.bulletCount; i++) {
+                    const angleOffset = (i - Math.floor(player2.bulletCount / 2)) * 10; // Spread bullets
+                    const angle = player2.lastDirection.angle + angleOffset;
+                    const rad = (angle * Math.PI) / 180;
 
-                const projectileX = player2.x + PLAYER_SIZE / 2 - player2.bulletSize / 2;
-                const projectileY = player2.y + PLAYER_SIZE / 2 - player2.bulletSize / 2;
-                createProjectile(
-                    projectileX,
-                    projectileY,
-                    Math.cos(rad),
-                    Math.sin(rad),
-                    false,
-                    player2.bulletSize,
-                    player2.damage
-                );
+                    const projectileX = player2.x + PLAYER_SIZE / 2 - player2.bulletSize / 2;
+                    const projectileY = player2.y + PLAYER_SIZE / 2 - player2.bulletSize / 2;
+                    createProjectile(
+                        projectileX,
+                        projectileY,
+                        Math.cos(rad),
+                        Math.sin(rad),
+                        false,
+                        player2.bulletSize,
+                        player2.damage
+                    );
+                }
             }
+            player2.lastShot = currentTime;
         }
-        player2.lastShot = currentTime;
     }
 }
 
@@ -733,14 +869,12 @@ function handleWallBreaking(wall, index, player, isSuperpowerProjectile) {
                 player.energy = Math.min(100, player.energy + energyGain);
             }
 
-            setTimeout(() => {
-                if (wallElement.parentNode) {
-                    wallElement.remove(); // Remove from DOM
-                }
-                if (walls[index] === wall) {
-                    walls.splice(index, 1); // Remove from array
-                }
-            }, 300); // Delay for animation
+            if (wallElement.parentNode) {
+                wallElement.remove(); // Remove from DOM
+            }
+            if (walls[index] === wall) {
+                walls.splice(index, 1); // Remove from array
+            }
 
             // Spawn shield drop
             spawnShield(wall.x, wall.y);
@@ -760,14 +894,12 @@ function handleWallBreaking(wall, index, player, isSuperpowerProjectile) {
                 player.energy = Math.min(100, player.energy + energyGain);
             }
 
-            setTimeout(() => {
-                if (wallElement.parentNode) {
-                    wallElement.remove();
-                }
-                if (walls[index] === wall) {
-                    walls.splice(index, 1);
-                }
-            }, 300);
+            if (wallElement.parentNode) {
+                wallElement.remove();
+            }
+            if (walls[index] === wall) {
+                walls.splice(index, 1);
+            }
 
             // Spawn random drops
             spawnDrops(wall.x, wall.y);
@@ -816,6 +948,7 @@ function spawnShield(x, y) {
 
 // Update projectiles (continued)
 function updateProjectiles() {
+
     for (let i = projectiles.length - 1; i >= 0; i--) {
         const projectile = projectiles[i];
 
@@ -834,9 +967,86 @@ function updateProjectiles() {
             projectile.y < 0 ||
             projectile.y > GAME_HEIGHT
         ) {
-            projectile.element.remove();
+            // Remove projectile if out of bounds
+            if (projectile.element.parentNode) {
+                projectile.element.remove();
+            }
             projectiles.splice(i, 1);
             continue;
+        }
+
+        // Check collision with enemies
+        const currentFloorData = floors.find(f => f.id === currentFloor);
+
+        if (currentFloorData) {
+            const enemyElements = document.querySelectorAll('.enemy, .boss'); // Use a different variable name
+            enemyElements.forEach(enemyElement => {
+                const enemyBox = {
+                    x: parseFloat(enemyElement.style.left),
+                    y: parseFloat(enemyElement.style.top),
+                    width: parseFloat(enemyElement.style.width),
+                    height: parseFloat(enemyElement.style.height)
+                };
+
+                if (checkCollision(projectile, enemyBox)) {
+                    const enemyId = enemyElement.getAttribute('data-id');
+                    const enemyIndex = enemies.findIndex(e => e.id === Number(enemyId));
+
+                    if (enemyIndex !== -1) {
+                        const enemy = enemies[enemyIndex];
+
+                        // Ensure the projectile does not damage its source enemy
+                        if (projectile.sourceEnemy === enemy) {
+                            return; // Skip this enemy
+                        }
+
+                        // Reduce enemy HP or remove enemy
+                        enemy.hp -= projectile.damage;
+                        // console.log(`Enemy hit! ID: ${enemy.id}, New HP: ${enemy.hp}`);
+
+                        if (enemy.hp <= 0) {
+                            console.log(`Enemy is dead: ID ${enemy.id}`);
+                            enemy.isAlive = false;
+
+                            // Remove the enemy's DOM element
+                            if (enemy.element && enemy.element.parentNode) {
+                                enemy.element.remove();
+                            }
+
+                            // Remove the enemy's DOM element
+                            if (enemy.sword && enemy.sword.parentNode) {
+                                enemy.sword.remove();
+                            }
+
+                            // Remove the HP bar wrapper
+                            if (enemy.hpBarWrapper && enemy.hpBarWrapper.parentNode) {
+                                enemy.hpBarWrapper.remove();
+                            }
+
+                            // Remove the enemy from the array
+                            enemies.splice(enemyIndex, 1);
+
+                            // Update the floor's enemy count
+                            // console.log(`Enemy defeated! Remaining enemies: ${currentFloorData.enemies - 1}`);
+                            currentFloorData.enemies--;
+                            if (currentFloorData.enemies === 0) {
+                                showOverlayMessage('All enemies defeated! Enter the elevator to proceed.');
+                            }
+                        } else {
+                            // Update the enemy's HP bar
+                            const hpPercentage = (enemy.hp / enemy.maxHp) * 100;
+                            enemy.hpBar.style.width = `${hpPercentage}px`;
+                        }
+
+                        // Remove the projectile
+                        if (projectile.element.parentNode) {
+                            projectile.element.remove();
+                        }
+                        projectiles.splice(i, 1);
+                        return;
+                    }
+                }
+            });
         }
 
         // Check collision with walls
@@ -854,54 +1064,634 @@ function updateProjectiles() {
             }
         }
 
-        // Check collision with players
-        const targetPlayer = projectile.isPlayer1 ? player2 : player1;
-        const targetBox = {
-            x: targetPlayer.x,
-            y: targetPlayer.y,
-            width: PLAYER_SIZE,
-            height: PLAYER_SIZE
-        };
+        // Check players was hit
+        if (projectile.isEnemy) {
+            const targetPlayer = Math.random() < 0.5 ? player1 : player2;
+            const targetBox = {
+                x: targetPlayer.x,
+                y: targetPlayer.y,
+                width: PLAYER_SIZE,
+                height: PLAYER_SIZE
+            };
 
-        if (checkCollision(projectile, targetBox)) {
-            // Ensure superpower projectiles only hit once
-            if (projectile.isSuperpower && projectile.hasHit) {
-                continue; // Skip if this superpower projectile has already hit
-            }
+            if (checkCollision(projectile, targetBox)) {
+                // Deal damage to the player
+                if (targetPlayer.shield > 0) {
+                    targetPlayer.shield -= projectile.damage;
 
-            if (targetPlayer.shield > 0) {
-                targetPlayer.shield -= projectile.damage || PROJECTILE_DAMAGE;
+                    // Remove shield if it reaches 0
+                    if (targetPlayer.shield <= 0) {
+                        const shieldElement = document.getElementById(targetPlayer === player1 ? 'player1-shield' : 'player2-shield');
+                        if (shieldElement) shieldElement.remove();
+                    }
+                } else {
+                    targetPlayer.hp -= projectile.damage;
+                    createHitEffect(targetPlayer.x + PLAYER_SIZE / 2, targetPlayer.y + PLAYER_SIZE / 2);
 
-                // Remove shield if it reaches 0
-                if (targetPlayer.shield <= 0) {
-                    const shieldElement = document.getElementById(targetPlayer === player1 ? 'player1-shield' : 'player2-shield');
-                    if (shieldElement) shieldElement.remove();
-                }
-            } else {
-                targetPlayer.hp -= projectile.damage || PROJECTILE_DAMAGE; // Use custom damage for superpowers
-                createHitEffect(targetPlayer.x + PLAYER_SIZE / 2, targetPlayer.y + PLAYER_SIZE / 2);
-
-                // Apply knockback if hit by a superpower
-                if (projectile.isSuperpower) {
-                    applyKnockback(targetPlayer, projectile.directionX, projectile.directionY);
+                    // Check if the game is over
+                    if (targetPlayer.hp <= 0) {
+                        endGame(targetPlayer === player1 ? 'Player 2' : 'Player 1');
+                    }
                 }
 
-                // Check if the game is over
-                if (targetPlayer.hp <= 0) {
-                    endGame(projectile.isPlayer1 ? 'Player 1' : 'Player 2');
+                // Remove the projectile
+                if (projectile.element.parentNode) {
+                    projectile.element.remove();
                 }
-            }
-
-            // Mark superpower projectiles as having hit
-            if (projectile.isSuperpower) {
-                projectile.hasHit = true; // Prevent further damage or knockback
-            } else {
-                // For normal projectiles, remove them on collision
-                projectile.element.remove();
                 projectiles.splice(i, 1);
+                continue;
+            }
+        }
+
+        if (walls.length === 0) {
+            playersAreFriends = true; // Players become friends when all walls are broken
+            // Show the friendship message only once
+            if (!friendshipMessageShown) {
+                showOverlayMessage('Players are now friends! Work together to survive!');
+                friendshipMessageShown = true; // Mark the message as shown
+            }
+        }
+
+        // Check collision with players - players
+        if (!playersAreFriends) {
+            const targetPlayer = projectile.isPlayer1 ? player2 : player1;
+            const targetBox = {
+                x: targetPlayer.x,
+                y: targetPlayer.y,
+                width: PLAYER_SIZE,
+                height: PLAYER_SIZE
+            };
+
+            if (checkCollision(projectile, targetBox)) {
+                // Ensure superpower projectiles only hit once
+                if (projectile.isSuperpower && projectile.hasHit) {
+                    continue; // Skip if this superpower projectile has already hit
+                }
+
+                if (targetPlayer.shield > 0) {
+                    targetPlayer.shield -= projectile.damage || PROJECTILE_DAMAGE;
+
+                    // Remove shield if it reaches 0
+                    if (targetPlayer.shield <= 0) {
+                        const shieldElement = document.getElementById(targetPlayer === player1 ? 'player1-shield' : 'player2-shield');
+                        if (shieldElement) shieldElement.remove();
+                    }
+                } else {
+                    targetPlayer.hp -= projectile.damage || PROJECTILE_DAMAGE; // Use custom damage for superpowers
+                    createHitEffect(targetPlayer.x + PLAYER_SIZE / 2, targetPlayer.y + PLAYER_SIZE / 2);
+
+                    // Apply knockback if hit by a superpower
+                    if (projectile.isSuperpower) {
+                        applyKnockback(targetPlayer, projectile.directionX, projectile.directionY);
+                    }
+
+                    // Check if the game is over
+                    if (targetPlayer.hp <= 0) {
+                        endGame(projectile.isPlayer1 ? 'Player 1' : 'Player 2');
+                    }
+                }
+
+                // Mark superpower projectiles as having hit
+                if (projectile.isSuperpower) {
+                    projectile.hasHit = true; // Prevent further damage or knockback
+                } else {
+                    // For normal projectiles, remove them on collision
+                    projectile.element.remove();
+                    projectiles.splice(i, 1);
+                }
             }
         }
     }
+
+    // // Show the elevator when all walls are broken
+    // if (playersAreFriends) {
+    //     showElevator();
+    // }
+}
+
+function showElevator() {
+    const elevator = document.getElementById('elevator');
+    const leftDoor = document.querySelector('.left-door');
+    const rightDoor = document.querySelector('.right-door');
+
+    // Position the elevator at the left-most side of the screen
+    elevator.style.left = '110px';
+
+    // Delay before showing the elevator
+    setTimeout(() => {
+        elevator.style.display = 'flex'; // Make the elevator visible
+        elevator.style.top = '150px'; // Move the elevator into view
+
+        // Open doors after the elevator reaches its position
+        setTimeout(() => {
+            elevator.classList.add('open'); // Add the "open" class
+            leftDoor.style.transform = 'translateX(-100%)';
+            rightDoor.style.transform = 'translateX(100%)';
+        }, 3000); // Wait for the elevator to finish moving
+    }, 3000); // Delay before the elevator starts moving
+}
+
+
+function moveToNextFloor() {
+    if (elevatorMoving) return;
+
+    const elevator = document.getElementById('elevator');
+    const leftDoor = document.querySelector('.left-door');
+    const rightDoor = document.querySelector('.right-door');
+    const floorIndicator = document.getElementById('floor-indicator');
+    const floorContainer = document.querySelector('.floor-container');
+
+    const elevatorBounds = elevator.getBoundingClientRect();
+    const player1Bounds = document.getElementById('player1').getBoundingClientRect();
+    const player2Bounds = document.getElementById('player2').getBoundingClientRect();
+
+    // Check if players are inside the elevator area
+    const player1Inside =
+        player1Bounds.left >= elevatorBounds.left && player1Bounds.right <= elevatorBounds.right &&
+        player1Bounds.top >= elevatorBounds.top && player1Bounds.bottom <= elevatorBounds.bottom;
+
+    const player2Inside =
+        player2Bounds.left >= elevatorBounds.left && player2Bounds.right <= elevatorBounds.right &&
+        player2Bounds.top >= elevatorBounds.top && player2Bounds.bottom <= elevatorBounds.bottom;
+
+    // If enemies are still alive, do not proceed to the next floor
+    const currentFloorData = floors.find(f => f.id === currentFloor);
+    if (currentFloorData && currentFloorData.enemies > 0) {
+        return;
+    }
+
+    if (!player1Inside || !player2Inside) {
+        return; // Do nothing if both players are not inside the elevator
+    }
+
+    elevatorMoving = true; // Set the flag to indicate the elevator is moving
+
+    // Close the doors when both players are inside
+    elevator.classList.remove('open');
+    elevator.classList.add('closed');
+    leftDoor.style.transform = 'translateX(0)';
+    rightDoor.style.transform = 'translateX(0)';
+
+    // Move to the next floor after doors close
+    setTimeout(() => {
+        if (currentFloor < 14) {
+            currentFloor++; // Increment the floor number
+            floorIndicator.textContent = `Floor ${currentFloor}`;
+
+            // Scroll the floor-container to simulate moving up
+            const newTop = parseInt(floorContainer.style.top || '-6630px') + 510; // Move up by one floor
+            floorContainer.style.top = `${newTop}px`;
+
+            // Open the doors after reaching the next floor
+            setTimeout(() => {
+                elevator.classList.remove('closed');
+                elevator.classList.add('open');
+                leftDoor.style.transform = 'translateX(-100%)';
+                rightDoor.style.transform = 'translateX(100%)';
+
+                // Spawn enemies if not on the celebration floor
+                if (currentFloor < 14) {
+                    spawnEnemies(currentFloor);
+                } else {
+                    floorIndicator.textContent = 'Celebration Floor!';
+                }
+
+                elevatorMoving = false; // Reset the flag after the doors open
+            }, 3000); // Wait for the elevator to "arrive" at the next floor
+        } else {
+            elevatorMoving = false; // Reset the flag if on the last floor
+        }
+    }, 3000);
+}
+
+//enemies
+function spawnEnemies(floor) {
+    const floorData = floors.find(f => f.id === floor);
+    if (!floorData) return;
+
+    // Clear any existing enemies properly
+    enemies.forEach(enemy => {
+        if (enemy.element) enemy.element.remove();
+    });
+    enemies = [];
+    console.log(`Spawning enemies for floor ${floor}`);
+    if (floorData.type === 'celebration') {
+        showOverlayMessage('Congratulations! You have reached the celebration floor!');
+        return;
+    }
+
+    if (floorData.type === 'boss') {
+        for (let i = 0; i < floorData.enemies; i++) {
+            // Spawn a boss
+            const boss = {
+                id: i + 1, // Assign unique IDs to each boss
+                x: GAME_WIDTH / 2 - 50 + (i * 120), // Offset each boss horizontally
+                y: GAME_HEIGHT / 2 - 50,
+                velocityX: (Math.random() - 0.5) * 2, // Random horizontal velocity
+                velocityY: (Math.random() - 0.5) * 2, // Random vertical velocity
+                hp: floorData.bossType === 'weak' ? 5000 :
+                    floorData.bossType === 'midstrong' ? 10000 : 20000,
+                maxHp: floorData.bossType === 'weak' ? 5000 :
+                    floorData.bossType === 'midstrong' ? 10000 : 20000,
+                damage: floorData.bossType === 'weak' ? 200 :
+                    floorData.bossType === 'midstrong' ? 400 : 800,
+                attackCooldown: floorData.bossType === 'weak' ? 2000 :
+                    floorData.bossType === 'midstrong' ? 1500 : 1000,
+                isAlive: true,
+                lastAttackTime: 0,
+                angleOffset: 0,
+                attackPattern: 'radial', // Start with radial attack
+                element: document.createElement('div'),
+                hpBar: document.createElement('div'),
+                behavior: function () {
+                    if (this.hp <= 0) return; // Stop behavior if dead
+
+                    // Smooth boss movement
+                    this.x += this.velocityX;
+                    this.y += this.velocityY;
+
+                    // Reverse direction if hitting boundaries
+                    if (this.x <= 0 || this.x >= GAME_WIDTH - 100) this.velocityX *= -1;
+                    if (this.y <= 0 || this.y >= GAME_HEIGHT - 100) this.velocityY *= -1;
+
+                    // Update boss position in the DOM
+                    this.element.style.left = `${this.x}px`;
+                    this.element.style.top = `${this.y}px`;
+
+                    // Update HP bar position and width
+                    this.hpBarWrapper.style.left = `${this.x}px`;
+                    this.hpBarWrapper.style.top = `${this.y - 10}px`; // Position above the boss
+                    this.hpBar.style.width = `${(this.hp / this.maxHp) * 100}%`; // Update width based on HP
+
+                    // Boss attacks
+                    const currentTime = Date.now();
+                    if (currentTime - this.lastAttackTime >= this.attackCooldown) {
+                        this.lastAttackTime = currentTime;
+
+                        if (this.attackPattern === 'radial') {
+                            console.log('radial attack fired!');
+                            // Radial attack
+                            for (let angle = 0; angle < 360; angle += 45) {
+                                const rad = (angle * Math.PI) / 180;
+                                const projectile = createProjectile(
+                                    this.x + 50, this.y + 50,
+                                    Math.cos(rad), Math.sin(rad),
+                                    false, 20, this.damage, true
+                                );
+                                projectile.sourceEnemy = this;
+                            }
+                            this.attackPattern = 'spiral'; // Switch to spiral attack next
+                        } else if (this.attackPattern === 'spiral') {
+                            console.log('Spiral attack started!');
+
+                            let step = 0;
+                            const speedMultiplier = 0.2; // Slower projectile movement
+                            const spiralInterval = setInterval(() => {
+                                if (step >= 20) { // Fire 12 projectiles over time
+                                    clearInterval(spiralInterval);
+                                    this.attackPattern = 'radial'; // Switch back to radial attack next
+                                    return;
+                                }
+
+                                const angle = this.angleOffset + step * 30; // Gradual angle increase
+                                const rad = (angle * Math.PI) / 180;
+                                const projectile = createProjectile(
+                                    this.x + 50, this.y + 50,
+                                    Math.cos(rad) * speedMultiplier,  // Slower outward movement
+                                    Math.sin(rad) * speedMultiplier,
+                                    false, 20, this.damage, true
+                                );
+                                projectile.sourceEnemy = this;
+
+                                step++; // Move to next step
+                                this.angleOffset += 10; // Slow spiral effect
+                            }, 80); // Fire every 80ms for fast attack speed
+                        }
+
+                    }
+                }
+            };
+
+            boss.element.className = 'boss';
+            boss.element.style.position = 'absolute';
+            boss.element.style.width = '100px';
+            boss.element.style.height = '100px';
+            boss.element.style.backgroundColor = floorData.bossType === 'weak' ? 'black' :
+                floorData.bossType === 'midstrong' ? 'darkred' : 'purple';
+            boss.element.style.borderRadius = '50%';
+            boss.element.style.left = `${boss.x}px`;
+            boss.element.style.top = `${boss.y}px`;
+            boss.element.setAttribute('data-hp', boss.hp.toString());
+            boss.element.setAttribute('data-id', boss.id);
+
+            boss.hpBarWrapper = document.createElement('div'); // Wrapper for the HP bar
+            boss.hpBarWrapper.className = 'hp-bar-wrapper';
+            boss.hpBarWrapper.style.position = 'absolute';
+            boss.hpBarWrapper.style.height = '5px';
+            boss.hpBarWrapper.style.width = '100px'; // Match the boss's width
+            boss.hpBarWrapper.style.backgroundColor = 'gray'; // Default gray background
+            boss.hpBarWrapper.style.top = `${boss.y - 10}px`; // Position above the boss
+            boss.hpBarWrapper.style.left = `${boss.x}px`;
+            boss.hpBarWrapper.style.border = '1px solid black'; // Optional border for clarity
+
+            boss.hpBar.className = 'hp-bar';
+            boss.hpBar.style.position = 'absolute';
+            boss.hpBar.style.height = '100%'; // Fill the height of the wrapper
+            boss.hpBar.style.width = '100%'; // Full width initially
+            boss.hpBar.style.backgroundColor = 'red'; // Green for current HP
+
+            // Append the HP bar to the wrapper
+            boss.hpBarWrapper.appendChild(boss.hpBar);
+
+            // Append the wrapper to the game container
+            gameContainer.appendChild(boss.hpBarWrapper);
+
+            gameContainer.appendChild(boss.element);
+
+            enemies.push(boss);
+        }
+    } else {
+        for (let i = 0; i < floorData.enemies; i++) {
+            const isMelee = Math.random() < 0.5;
+            const enemy = {
+                id: i + 1,
+                x: Math.random() * (GAME_WIDTH - PLAYER_SIZE),
+                y: Math.random() * (GAME_HEIGHT - PLAYER_SIZE),
+                hp: floorData.type === 'weak' ? 500 :
+                    floorData.type === 'midstrong' ? 1000 : 2000,
+                maxHp: floorData.type === 'weak' ? 500 :
+                    floorData.type === 'midstrong' ? 1000 : 2000,
+                damage: floorData.type === 'weak' ? 10 :
+                    floorData.type === 'midstrong' ? 20 : 40,
+                isMelee: isMelee,
+                lastAttackTime: 0,
+                attackCooldown: 1000,
+                isAlive: true, // Add a flag to track if enemy is alive
+                activeAttacks: [], // Store references to active melee attacks
+                element: document.createElement('div'),
+                sword: isMelee ? document.createElement('div') : null,
+                hpBarWrapper: document.createElement('div'), // Wrapper for the HP bar
+                hpBar: document.createElement('div'),
+                behavior: function () {
+                    // First check if the enemy is dead
+                    if (this.hp <= 0) return;
+                    // if (this.hp <= 0) {
+                    //     console.log('is 0 HP CHECKKK');
+                    //     if (this.isAlive) {
+                    //         console.log('is ALIVE CHECKKK');
+                    //         // Clean up any active melee attacks
+                    //         this.activeAttacks.forEach(attack => {
+                    //             if (attack && attack.parentNode) {
+                    //                 attack.remove();
+                    //             }
+                    //         });
+                    //         this.activeAttacks = [];
+
+                    //         // Clean up projectiles from this enemy
+                    //         projectiles = projectiles.filter(p => {
+                    //             if (p.sourceEnemy === this) {
+                    //                 if (p.element && p.element.parentNode) {
+                    //                     console.log('Removing projectile from enemy:', p);
+                    //                     p.element.remove();
+                    //                 }
+                    //                 return false;
+                    //             }
+                    //             return true;
+                    //         });
+
+                    //         // Remove the enemy's element
+                    //         if (this.element && this.element.parentNode) {
+                    //             this.element.remove();
+                    //         }
+
+                    //         // Remove the sword element
+                    //         console.log('Removing sword from enemy11111');
+                    //         if (this.sword && this.sword.parentNode) {
+                    //             console.log('Removing sword from enemy22222');
+                    //             this.sword.remove();
+                    //         }
+
+                    //         // Remove the HP bar wrapper
+                    //         if (this.hpBarWrapper && this.hpBarWrapper.parentNode) {
+                    //             this.hpBarWrapper.remove();
+                    //         }
+
+                    //         this.isAlive = false; // Mark as no longer alive
+                    //         enemies = enemies.filter(e => e !== this); // Remove from array
+                    //     }
+                    //     return; // Exit behavior function
+                    // }
+
+                    // Update sword position (only for melee enemies)
+                    if (this.isMelee && this.sword) {
+                        this.sword.style.left = `${this.x}px`; // Top-left of the enemy
+                        this.sword.style.top = `${this.y}px`;
+                    }
+
+                    // if (this.isMelee) {
+                    //     const target = Math.random() < 0.5 ? player1 : player2;
+                    //     const dx = target.x - this.x;
+                    //     const dy = target.y - this.y;
+                    //     const distance = Math.sqrt(dx * dx + dy * dy);
+                    //     this.x += (dx / distance) * 2;
+                    //     this.y += (dy / distance) * 2;
+
+                    //     const enemyBox = { x: this.x, y: this.y, width: 40, height: 40 };
+                    //     const targetBox = { x: target.x, y: target.y, width: PLAYER_SIZE, height: PLAYER_SIZE };
+
+                    //     if (checkCollision(enemyBox, targetBox)) {
+                    //         const currentTime = Date.now();
+                    //         if (currentTime - this.lastAttackTime >= this.attackCooldown) {
+                    //             this.lastAttackTime = currentTime;
+                    //             // Trigger attack animation
+                    //             this.sword.classList.add('melee-attack-active');
+                    //             setTimeout(() => {
+                    //                 this.sword.classList.remove('melee-attack-active');
+                    //             }, 300); // Duration of the attack animation
+
+                    //             if (target.shield > 0) {
+                    //                 target.shield -= this.damage;
+                    //                 if (target.shield <= 0) {
+                    //                     const shieldElement = document.getElementById(target === player1 ? 'player1-shield' : 'player2-shield');
+                    //                     if (shieldElement) shieldElement.remove();
+                    //                 }
+                    //             } else {
+                    //                 target.hp -= this.damage;
+                    //                 createHitEffect(target.x + PLAYER_SIZE / 2, target.y + PLAYER_SIZE / 2);
+                    //                 if (target.hp <= 0) {
+                    //                     endGame(target === player1 ? 'Player 2' : 'Player 1');
+                    //                 }
+                    //             }
+                    //         }
+                    //     }
+                    // } 
+                    if (this.isMelee) {
+                        // Update target every 3 seconds
+                        if (!this.target || Date.now() - this.lastTargetUpdate > 1000) {
+                            const distanceToPlayer1 = Math.sqrt(
+                                Math.pow(player1.x - this.x, 2) + Math.pow(player1.y - this.y, 2)
+                            );
+                            const distanceToPlayer2 = Math.sqrt(
+                                Math.pow(player2.x - this.x, 2) + Math.pow(player2.y - this.y, 2)
+                            );
+
+                            this.target = distanceToPlayer1 < distanceToPlayer2 ? player1 : player2;
+                            this.lastTargetUpdate = Date.now(); // Update the last target update time
+                        }
+
+                        // Chase the target
+                        if (this.target) {
+                            const dx = this.target.x - this.x;
+                            const dy = this.target.y - this.y;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+
+                            if (distance > 0) {
+                                this.x += (dx / distance) * 2; // Move toward the target
+                                this.y += (dy / distance) * 2;
+                            }
+
+                            const enemyBox = { x: this.x, y: this.y, width: 40, height: 40 };
+                            const targetBox = { x: this.target.x, y: this.target.y, width: PLAYER_SIZE, height: PLAYER_SIZE };
+
+                            if (checkCollision(enemyBox, targetBox)) {
+                                const currentTime = Date.now();
+                                if (currentTime - this.lastAttackTime >= this.attackCooldown) {
+                                    this.lastAttackTime = currentTime;
+
+                                    // Trigger attack animation
+                                    this.sword.classList.add('melee-attack-active');
+                                    setTimeout(() => {
+                                        this.sword.classList.remove('melee-attack-active');
+                                    }, 300); // Duration of the attack animation
+
+                                    if (this.target.shield > 0) {
+                                        this.target.shield -= this.damage;
+                                        if (this.target.shield <= 0) {
+                                            const shieldElement = document.getElementById(this.target === player1 ? 'player1-shield' : 'player2-shield');
+                                            if (shieldElement) shieldElement.remove();
+                                        }
+                                    } else {
+                                        this.target.hp -= this.damage;
+                                        createHitEffect(this.target.x + PLAYER_SIZE / 2, this.target.y + PLAYER_SIZE / 2);
+                                        if (this.target.hp <= 0) {
+                                            endGame(this.target === player1 ? 'Player 2' : 'Player 1');
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else {
+                        // Ranged enemy behavior
+                        const currentTime = Date.now();
+                        if (currentTime - this.lastAttackTime >= this.attackCooldown) {
+                            this.lastAttackTime = currentTime;
+
+                            const target = Math.random() < 0.5 ? player1 : player2;
+                            const dx = target.x - this.x;
+                            const dy = target.y - this.y;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+
+                            if (distance > 0) {
+                                const projectile = createProjectile(
+                                    this.x + 20, this.y + 20,
+                                    dx / distance, dy / distance,
+                                    false, 10, this.damage, true
+                                );
+
+                                // Tag this projectile with its source enemy
+                                projectile.sourceEnemy = this;
+                            }
+                        }
+                    }
+
+                    // Update HP bar position and width
+                    this.hpBarWrapper.style.left = `${this.x}px`;
+                    this.hpBarWrapper.style.top = `${this.y - 10}px`; // Position above the enemy
+                    this.hpBar.style.width = `${(this.hp / this.maxHp) * 100}%`;
+
+                    this.element.style.left = `${this.x}px`;
+                    this.element.style.top = `${this.y}px`;
+                    this.element.style.display = 'block';
+                }
+            };
+
+            enemy.element.className = 'enemy';
+            enemy.element.style.position = 'absolute';
+            enemy.element.style.width = '40px';
+            enemy.element.style.height = '40px';
+            enemy.element.style.backgroundColor = isMelee ? 'orange' : 'blue';
+            enemy.element.style.borderRadius = '50%';
+            enemy.element.style.left = `${enemy.x}px`;
+            enemy.element.style.top = `${enemy.y}px`;
+            enemy.element.setAttribute('data-hp', enemy.hp.toString());
+            enemy.element.setAttribute('data-id', enemy.id);
+
+            // Style the sword element (only for melee enemies)
+            if (isMelee) {
+                enemy.sword.className = 'enemy-sword';
+                enemy.sword.style.position = 'absolute';
+                enemy.sword.style.width = '8px';
+                enemy.sword.style.height = '50px';
+                enemy.sword.style.backgroundColor = 'silver';
+                enemy.sword.style.borderRadius = '5px';
+                enemy.sword.style.zIndex = '20';
+                enemy.sword.style.left = `${enemy.x}px`; // Initial position
+                enemy.sword.style.top = `${enemy.y}px`;
+                gameContainer.appendChild(enemy.sword); // Append the sword to the game container
+            }
+
+            // Style the HP bar wrapper
+            enemy.hpBarWrapper.className = 'hp-bar-wrapper';
+            enemy.hpBarWrapper.style.position = 'absolute';
+            enemy.hpBarWrapper.style.height = '5px';
+            enemy.hpBarWrapper.style.width = '40px'; // Match the enemy's width
+            enemy.hpBarWrapper.style.backgroundColor = 'gray'; // Default gray background
+            enemy.hpBarWrapper.style.top = `${enemy.y - 10}px`; // Position above the enemy
+            enemy.hpBarWrapper.style.left = `${enemy.x}px`;
+            enemy.hpBarWrapper.style.border = '1px solid black'; // Optional border for clarity
+            enemy.hpBarWrapper.style.zIndex = 10;
+
+            // Style the HP bar
+            enemy.hpBar.className = 'hp-bar';
+            enemy.hpBar.style.position = 'absolute';
+            enemy.hpBar.style.height = '100%'; // Fill the height of the wrapper
+            enemy.hpBar.style.width = '100%'; // Full width initially
+            enemy.hpBar.style.backgroundColor = 'red'; // Green for current HP
+
+            // Append the HP bar to the wrapper
+            enemy.hpBarWrapper.appendChild(enemy.hpBar);
+
+            // Append the wrapper and enemy to the game container
+            gameContainer.appendChild(enemy.hpBarWrapper);
+            gameContainer.appendChild(enemy.element);
+
+            enemies.push(enemy);
+        }
+    }
+}
+
+
+function showOverlayMessage(message) {
+    const overlay = document.createElement('div');
+    overlay.className = 'overlay-message';
+    overlay.textContent = message;
+    overlay.style.position = 'absolute';
+    overlay.style.top = '50%';
+    overlay.style.left = '50%';
+    overlay.style.transform = 'translate(-50%, -50%)';
+    overlay.style.fontSize = '32px';
+    overlay.style.color = 'white';
+    overlay.style.backgroundColor = 'rgba(77, 0, 128, 0.8)'; // Greenish background with opacity
+    overlay.style.padding = '20px';
+    overlay.style.borderRadius = '10px';
+    overlay.style.zIndex = '1000';
+    overlay.style.textAlign = 'center';
+
+    gameContainer.appendChild(overlay);
+
+    // Remove the overlay after 3 seconds
+    setTimeout(() => overlay.remove(), 4000);
 }
 
 // Apply knockback to the player
@@ -951,13 +1741,41 @@ function createHitEffect(x, y) {
 function endGame(winner) {
     gameOver = true;
     gameOverElement.style.display = 'block';
-    winnerText.textContent = `${winner} Wins!`;
+
+    // Create or modify a big text element
+    const bigText = document.createElement('div');
+    bigText.textContent = "GAME OVER!";
+    bigText.style.fontSize = "50px";
+    bigText.style.fontWeight = "bold";
+    bigText.style.textAlign = "center";
+    bigText.style.color = "red";
+    gameOverElement.prepend(bigText); // Add it before the existing text
+
+    if (playersAreFriends) {
+        winnerText.textContent = `${winner == 'Player 1' ? 'Player 2' : 'Player 1'} Died!`;
+    } else {
+        winnerText.textContent = `${winner} Wins!`;
+    }
+
     cancelAnimationFrame(gameLoopId);
 }
 
+
 // Activate superpower
 function activateSuperpower(player) {
-    if (player.energy >= 100) {
+    // Check if both players are inside the elevator
+    const elevator = document.getElementById('elevator');
+    const elevatorBounds = elevator.getBoundingClientRect();
+
+    // Get player bounding boxes
+    const playerBounds = document.getElementById('player1').getBoundingClientRect();
+
+    // Check if players are inside the elevator area
+    const playerInsideElevator =
+        playerBounds.left >= elevatorBounds.left && playerBounds.right <= elevatorBounds.right &&
+        playerBounds.top >= elevatorBounds.top && playerBounds.bottom <= elevatorBounds.bottom;
+
+    if (!playerInsideElevator && player.energy >= 100) {
         player.superpower = true;
         player.superpowerEndTime = Date.now() + SUPERPOWER_DURATION;
         player.energy = 0;
@@ -1102,6 +1920,37 @@ function gameLoop() {
     updateProjectiles();
     updateUI();
     handleSuperpowerExpiration();
+
+    // First, filter out dead enemies
+    enemies = enemies.filter(enemy => enemy.isAlive);
+
+    // Update enemy behaviors
+    enemies.forEach(enemy => {
+        if (enemy.behavior) {
+            enemy.behavior();
+        }
+    });
+
+    // Check if both players are inside the elevator
+    const elevator = document.getElementById('elevator');
+    const elevatorBounds = elevator.getBoundingClientRect();
+
+    // Get player bounding boxes
+    const player1Bounds = document.getElementById('player1').getBoundingClientRect();
+    const player2Bounds = document.getElementById('player2').getBoundingClientRect();
+
+    // Check if players are inside the elevator area
+    const player1Inside =
+        player1Bounds.left >= elevatorBounds.left && player1Bounds.right <= elevatorBounds.right &&
+        player1Bounds.top >= elevatorBounds.top && player1Bounds.bottom <= elevatorBounds.bottom;
+
+    const player2Inside =
+        player2Bounds.left >= elevatorBounds.left && player2Bounds.right <= elevatorBounds.right &&
+        player2Bounds.top >= elevatorBounds.top && player2Bounds.bottom <= elevatorBounds.bottom;
+
+    if (player1Inside && player2Inside) {
+        moveToNextFloor();
+    }
 
     gameLoopId = requestAnimationFrame(gameLoop);
 }
