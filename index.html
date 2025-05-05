@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lifewood Game</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div id="game-container">
+        <div class="floor-container">
+            <div id="floor14" class="floor"><span class="floor-text">Floor 14</span></div>
+            <div id="floor13" class="floor"><span class="floor-text">Floor 13</span></div>
+            <div id="floor12" class="floor"><span class="floor-text">Floor 12</span></div>
+            <div id="floor11" class="floor"><span class="floor-text">Floor 11</span></div>
+            <div id="floor10" class="floor"><span class="floor-text">Floor 10</span></div>
+            <div id="floor9" class="floor"><span class="floor-text">Floor 9</span></div>
+            <div id="floor8" class="floor"><span class="floor-text">Floor 8</span></div>
+            <div id="floor7" class="floor"><span class="floor-text">Floor 7</span></div>
+            <div id="floor6" class="floor"><span class="floor-text">Floor 6</span></div>
+            <div id="floor5" class="floor"><span class="floor-text">Floor 5</span></div>
+            <div id="floor4" class="floor"><span class="floor-text">Floor 4</span></div>
+            <div id="floor3" class="floor"><span class="floor-text">Floor 3</span></div>
+            <div id="floor2" class="floor"><span class="floor-text">Floor 2</span></div>
+            <div id="floor1" class="floor"><span class="floor-text"></span></div>
+        </div>
+
+        <div id="player1" class="player" style="background-color: green;"></div>
+        <div id="player2" class="player" style="background-color: red;"></div>
+
+        <div id="player1-status" class="status-bar">
+            <div class="hp-bar-container">
+                <div id="player1-hp" class="hp-bar"></div>
+            </div>
+            <div class="shield-bar-container">
+                <div id="player1-shield-bar" class="shield-bar"></div>
+            </div>
+            <div class="energy-bar-container">
+                <div id="player1-energy" class="energy-bar"></div>
+            </div>
+            <div class="player-name">
+                <h2 id="player1-name">Player 1</h2>
+                <div id="player1-upload" class="upload-circle" style="background-color: darkgreen;">
+                    <input type="file" id="player1-image" accept="image/*" style="display: none;">
+                </div>
+                <div id="player1-stats" class="player-stats">
+                    <h3>Stats:</h3>
+                    <ul>
+                        <li>Attack Damage: <span id="player1-damage">10</span></li>
+                        <li>Attack Speed: <span id="player1-speed">5</span></li>
+                        <li>Bullet Size: <span id="player1-bullet-size">10</span></li>
+                        <li>Bullet Count: <span id="player1-bullet-count">1</span></li>
+                        <li>Movement Speed: <span id="player1-movement-speed">5</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div id="player2-status" class="status-bar">
+            <div class="hp-bar-container">
+                <div id="player2-hp" class="hp-bar"></div>
+            </div>
+            <div class="shield-bar-container">
+                <div id="player2-shield-bar" class="shield-bar"></div>
+            </div>
+            <div class="energy-bar-container">
+                <div id="player2-energy" class="energy-bar"></div>
+            </div>
+            <div class="player-name">
+                <h2 id="player2-name">Player 2</h2>
+                <div id="player2-upload" class="upload-circle" style="background-color: red;">
+                    <input type="file" id="player2-image" accept="image/*" style="display: none;">
+                </div>
+                <div id="player2-stats" class="player-stats">
+                    <h3>Stats:</h3>
+                    <ul>
+                        <li>Attack Damage: <span id="player2-damage">10</span></li>
+                        <li>Attack Speed: <span id="player2-speed">5</span></li>
+                        <li>Bullet Size: <span id="player2-bullet-size">10</span></li>
+                        <li>Bullet Count: <span id="player2-bullet-count">1</span></li>
+                        <li>Movement Speed: <span id="player2-movement-speed">5</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div id="boss-stats" style="display: none;">
+            <h2 id="boss-name" style="color: red; text-align: center; margin: 0;">Boss Name</h2>
+            <div id="boss-hp-bar-container"
+                style="width: 100%; height: 20px; background-color: #555; border-radius: 10px; margin: 10px auto;">
+                <div id="boss-hp-bar" style="width: 100%; height: 100%; background-color: red; border-radius: 10px;">
+                </div>
+            </div>
+        </div>
+
+        <div id="elevator">
+            <div id="elevator-bg"></div>
+            <div id="elevator-doors">
+                <div class="door left-door"></div>
+                <div class="door right-door"></div>
+            </div>
+            <div id="floor-indicator">Floor 1</div>
+        </div>
+
+        <div id="buttons-game-controller">
+            <button id="reset-button">Reset Game</button>
+            <button id="pause-button" class="game-button">Pause</button>
+        </div>
+
+        <div id="game-over">
+            <h2 id="winner-text">Player 1 Wins!</h2>
+            <button id="play-again">Play Again</button>
+        </div>
+    </div>
+
+    <div id="game-start-overlay">
+        <div id="game-start-content">
+            <h1>Lifewood Game</h1>
+            <p><strong>Mechanics:</strong> Destroy your opponent by shooting them and breaking walls all the walls to become friends.
+                your superpower.</p>
+            <div id="controls-container">
+                <div class="controls-column">
+                    <h3>Player 1 (Life)</h3>
+                    <ul>
+                        <li>Move with <kbd>W</kbd>, <kbd>A</kbd>, <kbd>S</kbd>, <kbd>D</kbd></li>
+                        <li>Activate superpower with <kbd>Space</kbd></li>
+                    </ul>
+                </div>
+                <div class="controls-column">
+                    <h3>Player 2 (Robot)</h3>
+                    <ul>
+                        <li>Move with <kbd>←</kbd>, <kbd>→</kbd>, <kbd>↑</kbd>, <kbd>↓</kbd></li>
+                        <li>Activate superpower with <kbd>Enter</kbd></li>
+                    </ul>
+                </div>
+            </div>
+            <button id="start-game-button">Start Game</button>
+        </div>
+    </div>
+
+    <div id="pause-overlay">
+        Game Paused
+    </div>
+
+    <script src="game.js"></script>
+</body>
+
+</html>
