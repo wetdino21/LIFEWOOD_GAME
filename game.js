@@ -1,4 +1,4 @@
-// Game constants
+// Game constants try
 let gameStarted = false;
 const GAME_WIDTH = 1050;
 const GAME_HEIGHT = 510;
