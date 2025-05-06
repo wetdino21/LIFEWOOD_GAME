@@ -141,12 +141,14 @@ body {
 .player1-projectile {
     background-color: #8BC34A;
     box-shadow: 0 0 5px #8BC34A;
+    border: 0.3px solid #000000;
     z-index: 9;
 }
 
 .player2-projectile {
     background-color: #a722ff;
     box-shadow: 0 0 5px #a722ff;
+    border: 0.3px solid #000000;
     z-index: 9;
 }
 
@@ -620,7 +622,7 @@ body {
     width: 100%;
     height: 100%;
     display: flex;
-    z-index: 21;
+    z-index: 9;
     /* Ensure doors are in front of players */
 }
 
@@ -643,23 +645,6 @@ body {
     transform: translateX(0);
 }
 
-/* #floor-indicator {
-    position: absolute;
-    top: 10px;
-    font-size: 18px;
-    color: white;
-    text-align: center;
-    z-index: 30;
-} */
-
-/* #elevator.open .player {
-    z-index: 15; 
-}
-
-#elevator.closed .player {
-    z-index: 5; 
-} */
-
 .floor-container {
     position: absolute;
     width: 100%;
@@ -672,7 +657,6 @@ body {
 .floor {
     width: 100%;
     height: 510px;
-    /* Match the height of the game container */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -681,113 +665,86 @@ body {
 
 #floor1 {
     background-color: #000000;
+    background-image: url('assets/floor1.jpg');
 }
 
-/* Changed from white to black */
 #floor2 {
     background-color: #004400;
+    background-image: url('assets/floor2.jpg');
 }
 
-/* Dark green */
 #floor3 {
     background-color: #000088;
+    background-image: url('assets/floor3.jpg');
 }
 
-/* Dark blue */
 #floor4 {
     background-color: #880044;
+    background-image: url('assets/floor4.jpg');
 }
 
-/* Dark pink */
 #floor5 {
     background-color: #440088;
+    background-image: url('assets/floor5.jpg');
 }
 
-/* Dark purple */
 #floor6 {
     background-color: #008888;
+    background-image: url('assets/floor6.jpg');
 }
 
-/* Dark cyan */
 #floor7 {
     background-color: #888800;
+    background-image: url('assets/floor7.jpg');
 }
 
-/* Dark yellow */
 #floor8 {
     background-color: #884400;
+    background-image: url('assets/floor8.jpg');
 }
 
-/* Dark orange */
 #floor9 {
     background-color: #440088;
+    background-image: url('assets/floor9.jpg');
 }
 
-/* Dark violet */
 #floor10 {
     background-color: #008844;
+    background-image: url('assets/floor10.jpg');
 }
 
-/* Dark teal */
 #floor11 {
     background-color: #880000;
+    background-image: url('assets/floor11.jpg');
 }
 
-/* Dark red */
 #floor12 {
     background-color: #008800;
+    background-image: url('assets/floor12.jpg');
 }
 
-/* Dark green */
 #floor13 {
     background-color: #000088;
+    background-image: url('assets/floor13.jpg');
 }
 
-/* Dark blue */
 #floor14 {
     background-color: #886600;
+    background-image: url('assets/floor14.jpg');
 }
-
-/* Dark gold */
-
 
 .enemy {
     position: absolute;
     width: 40px;
     height: 40px;
-    background-color: purple;
     border-radius: 50%;
-    z-index: 10;
+    z-index: 11;
 }
-
-/* .melee-attack {
-    position: absolute;
-    width: 10px;
-    height: 50px;
-    background-color: red;
-    border-radius: 5px;
-    transform-origin: top center;
-    animation: swing 0.3s ease-in-out;
-    z-index: 10;
-}
-
-@keyframes swing {
-    0% {
-        transform: rotate(-45deg);
-    }
-
-    50% {
-        transform: rotate(0deg);
-    }
-
-    100% {
-        transform: rotate(45deg);
-    }
-} */
 
 .enemy-projectile {
     background-color: red;
     box-shadow: 0 0 5px red;
+    border: 0.3px solid #000000;
     z-index: 9;
 }
 
@@ -797,8 +754,8 @@ body {
     height: 100px;
     background-color: gold;
     border-radius: 5px;
-    transform-origin: top center;
-    z-index: 9;
+    transform-origin: left;
+    z-index: 11;
 }
 
 .melee-attack-active {
@@ -807,15 +764,15 @@ body {
 
 @keyframes swing {
     0% {
-        transform: rotate(-45deg);
-    }
-
-    50% {
         transform: rotate(0deg);
     }
 
+    50% {
+        transform: rotate(180deg);
+    }
+
     100% {
-        transform: rotate(45deg);
+        transform: rotate(360deg);
     }
 }
 

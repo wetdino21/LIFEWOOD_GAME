@@ -8,7 +8,7 @@ const PROJECTILE_SIZE = 10;
 const PROJECTILE_SPEED = 10;
 const WALL_SIZE = 30;
 const WALL_HITS_TO_BREAK = 3;
-const PLAYER_MAX_HP = 5000;
+const PLAYER_MAX_HP = 10000;
 const ENERGY_GAIN_PER_WALL = 20;
 const PROJECTILE_DAMAGE = 10;
 const SUPERPOWER_DURATION = 3000; // 3 seconds
@@ -30,20 +30,22 @@ let elevatorShown = false;
 
 const floors = [
     { id: 1, enemies: 0 }, // Floor 1 has no enemies
-    // { id: 2, enemies: 1, type: 'boss', bossType: 'weak' },
-    { id: 2, enemies: 5, type: 'weak' }, // Floor 2 has weak enemies
-    { id: 3, enemies: 7, type: 'weak' }, // Floor 3 has weak enemies
-    { id: 4, enemies: 10, type: 'weak' }, // Floor 4 has weak enemies
-    { id: 5, enemies: 1, type: 'boss', bossType: 'weak' }, // Floor 5 has a weak boss
-    { id: 6, enemies: 8, type: 'midstrong' }, // Floor 6 has mid-strong enemies
-    { id: 7, enemies: 10, type: 'midstrong' }, // Floor 7 has mid-strong enemies
-    { id: 8, enemies: 12, type: 'midstrong' }, // Floor 8 has mid-strong enemies
-    { id: 9, enemies: 15, type: 'midstrong' }, // Floor 9 has mid-strong enemies
-    { id: 10, enemies: 1, type: 'boss', bossType: 'midstrong' }, // Floor 10 has a mid-strong boss
-    { id: 11, enemies: 10, type: 'strong' }, // Floor 11 has strong enemies
-    { id: 12, enemies: 12, type: 'strong' }, // Floor 12 has strong enemies
-    { id: 13, enemies: 15, type: 'boss', bossType: 'strong' }, // Floor 13 has a strong boss
-    { id: 14, enemies: 0, type: 'celebration' } // Floor 14 is a celebration floor
+    { id: 2, enemies: 0, type: 'celebration' },
+    // // { id: 2, enemies: 1, type: 'boss', bossType: 'weak' },
+    // { id: 2, enemies: 3, type: 'weak' }, // Floor 2 has weak enemies
+    // { id: 3, enemies: 5, type: 'weak' }, // Floor 3 has weak enemies
+    // { id: 4, enemies: 7, type: 'weak' }, // Floor 4 has weak enemies
+    // { id: 5, enemies: 1, type: 'boss', bossType: 'weak' }, // Floor 5 has a weak boss
+    // { id: 6, enemies: 8, type: 'midstrong' }, // Floor 6 has mid-strong enemies
+    // { id: 7, enemies: 9, type: 'midstrong' }, // Floor 7 has mid-strong enemies
+    // { id: 8, enemies: 10, type: 'midstrong' }, // Floor 8 has mid-strong enemies
+    // { id: 9, enemies: 11, type: 'midstrong' }, // Floor 9 has mid-strong enemies
+    // { id: 10, enemies: 2, type: 'boss', bossType: 'midstrong' }, // Floor 10 has a mid-strong boss
+    // { id: 11, enemies: 10, type: 'strong' }, // Floor 11 has strong enemies
+    // { id: 12, enemies: 12, type: 'strong' }, // Floor 12 has strong enemies
+    // { id: 13, enemies: 3, type: 'boss', bossType: 'strong' }, // Floor 13 has a strong boss
+    // { id: 14, enemies: 0, type: 'celebration' }, // Floor 14 is a celebration floor
+    // { id: 15, enemies: 0 },
 ];
 
 // Game state
@@ -52,8 +54,9 @@ let player1 = {
     y: GAME_HEIGHT / 2,
     hp: PLAYER_MAX_HP,
     energy: 0,
-    damage: 10,
+    damage: 70,
     projectileSpeed: 0.5,
+    // projectileSpeed: 3,
     bulletSize: 10,
     bulletCount: 1,
     speed: 5,
@@ -74,7 +77,7 @@ let player2 = {
     y: GAME_HEIGHT / 2,
     hp: PLAYER_MAX_HP,
     energy: 0,
-    damage: 10,
+    damage: 70,
     projectileSpeed: 0.5,
     bulletSize: 10,
     bulletCount: 1,
@@ -96,13 +99,47 @@ let walls = [];
 let gameOver = false;
 let gameLoopId = null;
 
+const MELEE_ENEMY_IMAGES = [
+    'assets/melee_enemy1.png',
+    'assets/melee_enemy2.png',
+    'assets/melee_enemy3.png',
+    'assets/melee_enemy4.png',
+    'assets/melee_enemy5.png',
+    'assets/melee_enemy6.png',
+    'assets/melee_enemy7.png',
+    'assets/melee_enemy8.png',
+    'assets/melee_enemy9.png',
+    'assets/melee_enemy10.png',
+    'assets/melee_enemy11.png',
+];
+
+const RANGED_ENEMY_IMAGES = [
+    'assets/range_enemy1.png',
+    'assets/range_enemy2.png',
+    'assets/range_enemy3.png',
+    'assets/range_enemy4.png',
+    'assets/range_enemy5.png',
+    'assets/range_enemy6.png',
+    'assets/range_enemy7.png',
+];
+
+const BOSS_IMAGES = [
+    'assets/boss1.png',
+    'assets/boss2.png',
+    'assets/boss3.png',
+    'assets/boss4.png',
+    'assets/boss5.png',
+    'assets/boss6.png',
+    'assets/boss7.png',
+];
+
 const DROP_TYPES = [
     { type: 'bigger-bullets', icon: 'assets/atk_big.png', effect: (player) => player.bulletSize += 0.5 },
     { type: 'faster-projectile', icon: 'assets/atk_speed.png', effect: (player) => player.projectileSpeed += 0.3 },
     { type: 'fast-movement', icon: 'assets/move_fast.png', effect: (player) => player.speed += 1 },
     { type: 'bigger-damage', icon: 'assets/big_damage.png', effect: (player) => player.damage += 20 },
     { type: 'bullet-multiplier', icon: 'assets/add_bullet.png', effect: (player) => player.bulletCount += 1 },
-    { type: 'heal', icon: 'assets/heal.png', effect: (player) => player.hp = Math.min(PLAYER_MAX_HP + 500, player.hp + 500) },
+    { type: 'heal', icon: 'assets/heal.png', effect: (player) => player.hp = Math.min(PLAYER_MAX_HP, player.hp + 2000) },
     {
         type: 'curse',
         icon: 'assets/cursed.png',
@@ -499,44 +536,85 @@ function checkCollision(obj1, obj2) {
     );
 }
 
+let sound = null;
+
 function playStartSound() {
-    const sound = new Audio('assets/start_sound.mp3'); // Path to your sound file
+    // Stop and reset any currently playing sound
+    if (sound) {
+        sound.pause();
+        sound.currentTime = 0;
+    }
+
+    sound = new Audio('assets/start_sound.mp3'); // Path to your sound file
     sound.volume = 0.9; // Adjust volume (0.0 to 1.0)
     sound.play();
 }
 
+function playPlayer1HitSound() {
+    sound = new Audio('assets/player1_hit.mp3'); // Path to Player 1 hit sound
+    sound.volume = 0.2; // Adjust volume (0.0 to 1.0)
+    sound.play();
+}
+
+function playPlayer2HitSound() {
+    sound = new Audio('assets/player2_hit.mp3'); // Path to Player 2 hit sound
+    sound.volume = 0.2; // Adjust volume (0.0 to 1.0)
+    sound.play();
+}
+
+function playEnemyDeathSound() {
+    const sounds = [
+        'assets/enemy_hit1.mp3',
+        'assets/enemy_hit2.mp3',
+        'assets/enemy_hit3.mp3',
+        'assets/enemy_hit4.mp3'
+    ];
+
+    const randomIndex = Math.floor(Math.random() * sounds.length);
+    sound = new Audio(sounds[randomIndex]);
+    sound.volume = 1;
+    sound.play();
+}
+
+
+function playBossDeathSound() {
+    const sound = new Audio('assets/boss_hit.mp3'); // Path to boss death sound
+    sound.volume = 1; // Adjust volume (0.0 to 1.0)
+    sound.play();
+}
+
 function playPlayer1BulletSound() {
-    const sound = new Audio('assets/player1_bullet_sound.mp3'); // Path to your sound file
+    sound = new Audio('assets/player1_bullet_sound.mp3'); // Path to your sound file
     sound.volume = 0.7; // Adjust volume (0.0 to 1.0)
     sound.play();
 }
 
 function playPlayer2BulletSound() {
-    const sound = new Audio('assets/player2_bullet_sound.mp3'); // Path to your sound file
+    sound = new Audio('assets/player2_bullet_sound.mp3'); // Path to your sound file
     sound.volume = 0.1; // Adjust volume (0.0 to 1.0)
     sound.play();
 }
 
 function playEnemyRangeSound() {
-    const sound = new Audio('assets/laser3_sound.mp3'); // Path to your sound file
+    sound = new Audio('assets/laser3_sound.mp3'); // Path to your sound file
     sound.volume = 0.1; // Adjust volume (0.0 to 1.0)
     sound.play();
 }
 
 function playEnemyMeleeSound() {
-    const sound = new Audio('assets/sword.mp3'); // Path to your sound file
+    sound = new Audio('assets/sword.mp3'); // Path to your sound file
     sound.volume = 0.9; // Adjust volume (0.0 to 1.0)
     sound.play();
 }
 
 function playWallBreakSound() {
-    const sound = new Audio('assets/wall_break.mp3'); // Path to your sound file
+    sound = new Audio('assets/wall_break.mp3'); // Path to your sound file
     sound.volume = 0.2; // Adjust volume (0.0 to 1.0)
     sound.play();
 }
 
 function playOverlaySound() {
-    const sound = new Audio('assets/success_sound.mp3'); // Path to your sound file
+    sound = new Audio('assets/success_sound.mp3'); // Path to your sound file
     sound.volume = 0.9; // Adjust volume (0.0 to 1.0)
     sound.play();
 }
@@ -550,13 +628,19 @@ function playDropPickupSound(type) {
         soundPath = 'assets/pickup_sound.mp3'; // Default pickup sound
     }
 
-    const sound = new Audio(soundPath);
+    sound = new Audio(soundPath);
     sound.volume = 0.7; // Adjust volume (0.0 to 1.0)
     sound.play();
 }
 
 function playRocketSound() {
-    const sound = new Audio('assets/rocket_sound.mp3'); // Path to your sound file
+    sound = new Audio('assets/rocket_sound.mp3'); // Path to your sound file
+    sound.volume = 0.9; // Adjust volume (0.0 to 1.0)
+    sound.play();
+}
+
+function playGameOverSound() {
+    sound = new Audio('assets/gameover.mp3'); // Path to your sound file
     sound.volume = 0.9; // Adjust volume (0.0 to 1.0)
     sound.play();
 }
@@ -578,7 +662,7 @@ function playElevatorSound() {
 }
 
 function playLeavesSound() {
-    const sound = new Audio('assets/leaves_sound.mp3'); // Path to your sound file
+    sound = new Audio('assets/leaves_sound.mp3'); // Path to your sound file
     sound.volume = 0.9; // Adjust volume (0.0 to 1.0)
     sound.play();
 }
@@ -616,168 +700,6 @@ function createProjectile(x, y, directionX, directionY, isPlayer1, size, damage,
 
     return projectile;
 }
-
-// function movePlayers() {
-//     try {
-//         if (typeof player1.lastDirection.angle !== 'number') player1.lastDirection.angle = 270;
-//         if (typeof player2.lastDirection.angle !== 'number') player2.lastDirection.angle = 270;
-
-//         // Player 1 rotation
-//         if (player1.movement.left) player1.lastDirection.angle = (player1.lastDirection.angle - 5 + 360) % 360;
-//         if (player1.movement.right) player1.lastDirection.angle = (player1.lastDirection.angle + 5) % 360;
-
-//         // Player 2 rotation
-//         if (player2.movement.left) player2.lastDirection.angle = (player2.lastDirection.angle - 5 + 360) % 360;
-//         if (player2.movement.right) player2.lastDirection.angle = (player2.lastDirection.angle + 5) % 360;
-
-//         // Calculate movement deltas based on player speed
-//         const rad1 = (player1.lastDirection.angle * Math.PI) / 180;
-//         const dx1 = Math.cos(rad1) * player1.speed;
-//         const dy1 = Math.sin(rad1) * player1.speed;
-
-//         const rad2 = (player2.lastDirection.angle * Math.PI) / 180;
-//         const dx2 = Math.cos(rad2) * player2.speed;
-//         const dy2 = Math.sin(rad2) * player2.speed;
-
-//         // Elevator collision logic
-//         const elevator = document.getElementById('elevator');
-//         const elevatorBounds = elevator.getBoundingClientRect();
-//         const elevatorOpen = !elevator.classList.contains('closed'); // Check if elevator is open
-
-//         function movePlayer(player, dx, dy) {
-//             let newX = player.x + dx;
-//             let newY = player.y + dy;
-
-//             let canMoveX = true, canMoveY = true;
-//             const tempBoxX = { x: newX, y: player.y, width: PLAYER_SIZE, height: PLAYER_SIZE };
-//             const tempBoxY = { x: player.x, y: newY, width: PLAYER_SIZE, height: PLAYER_SIZE };
-
-//             // Check collision with walls
-//             for (const wall of walls) {
-//                 if (!wall.isDestroyed) {
-//                     if (checkCollision(tempBoxX, wall)) canMoveX = false;
-//                     if (checkCollision(tempBoxY, wall)) canMoveY = false;
-//                 }
-//             }
-
-//             // Check collision with elevator
-//             const playerBounds = player === player1
-//                 ? document.getElementById('player1').getBoundingClientRect()
-//                 : document.getElementById('player2').getBoundingClientRect();
-
-//             if (
-//                 playerBounds.right + dx > elevatorBounds.left &&
-//                 playerBounds.left + dx < elevatorBounds.right &&
-//                 playerBounds.bottom + dy > elevatorBounds.top &&
-//                 playerBounds.top + dy < elevatorBounds.bottom
-//             ) {
-//                 // Prevent movement through the left edge
-//                 if (playerBounds.left + dx < elevatorBounds.left) canMoveX = false;
-
-//                 // Prevent movement through the top edge
-//                 if (playerBounds.top + dy < elevatorBounds.top) canMoveY = false;
-
-//                 // Prevent movement through the bottom edge
-//                 if (playerBounds.bottom + dy > elevatorBounds.bottom) canMoveY = false;
-
-//                 // Allow entry only from the right side if the elevator is open
-//                 if (playerBounds.right + dx > elevatorBounds.left && playerBounds.left + dx < elevatorBounds.left) {
-//                     if (!elevatorOpen) canMoveX = false; // Block entry if closed
-//                 }
-
-//                 // Prevent exiting from top, left, or bottom when inside the elevator
-//                 if (
-//                     playerBounds.left >= elevatorBounds.left &&
-//                     playerBounds.right <= elevatorBounds.right &&
-//                     playerBounds.top >= elevatorBounds.top &&
-//                     playerBounds.bottom <= elevatorBounds.bottom
-//                 ) {
-//                     if (playerBounds.left + dx < elevatorBounds.left) canMoveX = false; // Block left movement
-//                     if (playerBounds.top + dy < elevatorBounds.top) canMoveY = false; // Block upward movement
-//                     if (playerBounds.bottom + dy > elevatorBounds.bottom) canMoveY = false; // Block downward movement
-
-//                     // Allow exit only from the right side if the elevator is open
-//                     if (!elevatorOpen && playerBounds.right + dx > elevatorBounds.right) {
-//                         canMoveX = false; // Block exit if closed
-//                     }
-//                 }
-//             }
-
-//             if (canMoveX) player.x = newX;
-//             if (canMoveY) player.y = newY;
-
-//             // Clamp inside boundaries
-//             player.x = Math.max(0, Math.min(GAME_WIDTH - PLAYER_SIZE, player.x));
-//             player.y = Math.max(0, Math.min(GAME_HEIGHT - PLAYER_SIZE, player.y));
-//         }
-
-//         if (player1.movement.up) movePlayer(player1, dx1, dy1);
-//         if (player1.movement.down) movePlayer(player1, -dx1, -dy1);
-//         if (player2.movement.up) movePlayer(player2, dx2, dy2);
-//         if (player2.movement.down) movePlayer(player2, -dx2, -dy2);
-
-//         // Resolve overlaps between players and enemies
-//         resolvePlayerEnemyOverlap(player1);
-//         resolvePlayerEnemyOverlap(player2);
-
-//         // Prevent players from overlapping each other
-//         function separatePlayers() {
-//             const player1Box = { x: player1.x, y: player1.y, width: PLAYER_SIZE, height: PLAYER_SIZE };
-//             const player2Box = { x: player2.x, y: player2.y, width: PLAYER_SIZE, height: PLAYER_SIZE };
-
-//             if (checkCollision(player1Box, player2Box)) {
-//                 const deltaX = player2.x - player1.x;
-//                 const deltaY = player2.y - player1.y;
-//                 const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY) || 1;
-
-//                 const pushAmount = 2;
-//                 let newX1 = player1.x - (deltaX / distance) * pushAmount;
-//                 let newY1 = player1.y - (deltaY / distance) * pushAmount;
-//                 let newX2 = player2.x + (deltaX / distance) * pushAmount;
-//                 let newY2 = player2.y + (deltaY / distance) * pushAmount;
-
-//                 // Check if pushing player 1 into a wall
-//                 let canMoveP1 = true;
-//                 const tempBoxP1 = { x: newX1, y: newY1, width: PLAYER_SIZE, height: PLAYER_SIZE };
-//                 for (const wall of walls) {
-//                     if (!wall.isDestroyed && checkCollision(tempBoxP1, wall)) {
-//                         canMoveP1 = false;
-//                         break;
-//                     }
-//                 }
-//                 if (canMoveP1) {
-//                     player1.x = newX1;
-//                     player1.y = newY1;
-//                 }
-
-//                 // Check if pushing player 2 into a wall
-//                 let canMoveP2 = true;
-//                 const tempBoxP2 = { x: newX2, y: newY2, width: PLAYER_SIZE, height: PLAYER_SIZE };
-//                 for (const wall of walls) {
-//                     if (!wall.isDestroyed && checkCollision(tempBoxP2, wall)) {
-//                         canMoveP2 = false;
-//                         break;
-//                     }
-//                 }
-//                 if (canMoveP2) {
-//                     player2.x = newX2;
-//                     player2.y = newY2;
-//                 }
-
-//                 // Re-check wall collisions after separation
-//                 movePlayer(player1, 0, 0);
-//                 movePlayer(player2, 0, 0);
-//             }
-//         }
-//         separatePlayers();
-
-//         // Apply rotation visually
-//         player1Element.style.transform = `rotate(${player1.lastDirection.angle}deg)`;
-//         player2Element.style.transform = `rotate(${player2.lastDirection.angle}deg)`;
-//     } catch (e) {
-//         console.error("Error in movePlayers:", e);
-//     }
-// }
 
 function movePlayers() {
     try {
@@ -1037,7 +959,7 @@ function fireProjectiles() {
                     directionY: Math.sin((player1.lastDirection.angle * Math.PI) / 180),
                     isPlayer1: true,
                     isSuperpower: true,
-                    damage: 35
+                    damage: 5 * player1.damage // Adjust damage based on player stats
                 });
 
                 // Fire the second vine projectile after a short delay
@@ -1068,7 +990,7 @@ function fireProjectiles() {
                         directionY: Math.sin((player1.lastDirection.angle * Math.PI) / 180),
                         isPlayer1: true,
                         isSuperpower: true,
-                        damage: 35
+                        damage: 5 * player1.damage // Adjust damage based on player stats
                     });
                 }, 500);
 
@@ -1136,7 +1058,7 @@ function fireProjectiles() {
                     directionY: Math.sin((player2.lastDirection.angle * Math.PI) / 180),
                     isPlayer1: false,
                     isSuperpower: true,
-                    damage: 75
+                    damage: 10 * player2.damage // Adjust damage based on player stats
                 });
 
                 player2.superpower = false; // End superpower after firing
@@ -1232,14 +1154,14 @@ function handleWallBreaking(wall, index, player, isSuperpowerProjectile) {
 //drop spawn
 function spawnDrops(x, y, isEnemy = false) {
     const dropChance = Math.random(); // Random chance for a drop
-    if (dropChance < 0.6) return; // 60% chance that no drop will spawn
+    if (dropChance < 0.3) return; // 30% chance that no drop will spawn
 
     // Adjust drop type based on whether the drop is from an enemy or a wall
     let filteredDrops;
     if (isEnemy) {
         // Increase the chance of spawning a heal drop for enemies
         const healChance = Math.random();
-        if (healChance < 0.5) { // 50% chance for heal drop
+        if (healChance < 0.6) { // 50% chance for heal drop
             filteredDrops = DROP_TYPES.filter(drop => drop.type === 'heal');
         } else {
             filteredDrops = DROP_TYPES.filter(drop => drop.type !== 'shield');
@@ -1282,6 +1204,9 @@ function spawnShield(x, y) {
 }
 
 function updateProjectiles() {
+    let player1HitSoundPlayed = false; // Track if Player 1 hit sound has been played
+    let player2HitSoundPlayed = false;
+
     for (let i = projectiles.length - 1; i >= 0; i--) {
         const projectile = projectiles[i];
 
@@ -1343,10 +1268,39 @@ function updateProjectiles() {
                         // Reduce enemy HP or remove enemy
                         enemy.hp -= projectile.damage;
 
+                        if (projectile.isSuperpower) {
+                            // Apply knockback to the enemy
+                            const knockbackDistance = 30; // Adjust knockback distance
+                            const dx = projectile.directionX;
+                            const dy = projectile.directionY;
+                            enemy.x += dx * knockbackDistance;
+                            enemy.y += dy * knockbackDistance;
+
+                            // Clamp enemy position to game boundaries
+                            enemy.x = Math.max(0, Math.min(GAME_WIDTH - 40, enemy.x));
+                            enemy.y = Math.max(0, Math.min(GAME_HEIGHT - 40, enemy.y));
+                        }
+
+                        // Update enemy position in the DOM
+                        enemy.element.style.left = `${enemy.x}px`;
+                        enemy.element.style.top = `${enemy.y}px`;
+
                         // Create a hit effect on the enemy
                         createEnemyHitEffect(enemy.x + 20, enemy.y + 20);
 
+                        // **Add energy to the player for hitting the enemy**
+                        const player = projectile.isPlayer1 ? player1 : player2;
+                        player.energy = Math.min(100, player.energy + 2); // Gain 2 energy per hit
+                        updateUI(); // Update the energy bar
+
                         if (enemy.hp <= 0) {
+                            // Play the appropriate death sound
+                            if (enemy.element.classList.contains('boss')) {
+                                playBossDeathSound(); // Play boss death sound
+                            } else {
+                                playEnemyDeathSound(); // Play enemy death sound
+                            }
+
                             spawnDrops(enemy.x, enemy.y, true);
                             enemy.isAlive = false;
 
@@ -1360,9 +1314,14 @@ function updateProjectiles() {
 
                             // Update the floor's enemy count
                             currentFloorData.enemies--;
+
+                            // **Add energy to the player for killing the enemy**
+                            player.energy = Math.min(100, player.energy + 20); // Gain 20 energy per kill
+                            updateUI(); // Update the energy bar
+
                             if (currentFloorData.enemies === 0) {
                                 console.log('Enemies Defeated Floor log!');
-                                playOverlaySound();
+                                
                                 showCustomOverlayMessage(
                                     'All enemies defeated!',
                                     'Enter the elevator to proceed.',
@@ -1382,10 +1341,12 @@ function updateProjectiles() {
                         }
 
                         // Remove the projectile
-                        safeRemoveElement(projectile.element);
-                        projectiles.splice(i, 1);
-                        enemyHit = true;
-                        break;
+                        if (!projectile.isSuperpower) {
+                            safeRemoveElement(projectile.element);
+                            projectiles.splice(i, 1);
+                            enemyHit = true;
+                            break;
+                        }
                     }
                 }
             }
@@ -1423,6 +1384,15 @@ function updateProjectiles() {
             };
 
             if (checkCollision(projectile, targetBox)) {
+                // Play the appropriate hit sound only once per frame
+                if (targetPlayer === player1 && !player1HitSoundPlayed) {
+                    playPlayer1HitSound();
+                    player1HitSoundPlayed = true; // Mark sound as played for Player 1
+                } else if (targetPlayer === player2 && !player2HitSoundPlayed) {
+                    playPlayer2HitSound();
+                    player2HitSoundPlayed = true; // Mark sound as played for Player 2
+                }
+
                 // Deal damage to the player
                 if (targetPlayer.shield > 0) {
                     targetPlayer.shield -= projectile.damage;
@@ -1456,7 +1426,6 @@ function updateProjectiles() {
             // Show the friendship message only once
             if (!friendshipMessageShown) {
                 console.log('Friendship Floor log!');
-                playOverlaySound();
                 showCustomOverlayMessage(
                     'Players are now friends!',
                     'Work together to survive!',
@@ -1473,9 +1442,7 @@ function updateProjectiles() {
                 showElevator(); // Show the elevator when all walls are broken
                 setTimeout(() => {
                     playElevatorSound(); // Play elevator sound
-                }, 2000);
-                console.log('Elevator sound played!');
-                console.log('Elevator is fukcing shown', elevatorShown);
+                }, 3000);
             }, 2000);
         }
 
@@ -1490,6 +1457,15 @@ function updateProjectiles() {
             };
 
             if (checkCollision(projectile, targetBox)) {
+                // Play the appropriate hit sound only once per frame
+                if (targetPlayer === player1 && !player1HitSoundPlayed) {
+                    playPlayer1HitSound();
+                    player1HitSoundPlayed = true; // Mark sound as played for Player 1
+                } else if (targetPlayer === player2 && !player2HitSoundPlayed) {
+                    playPlayer2HitSound();
+                    player2HitSoundPlayed = true; // Mark sound as played for Player 2
+                }
+
                 // Ensure superpower projectiles only hit once
                 if (projectile.isSuperpower && projectile.hasHit) {
                     continue; // Skip if this superpower projectile has already hit
@@ -1720,9 +1696,6 @@ function moveToNextFloor() {
 
                     setTimeout(() => {
                         spawnEnemies(currentFloor);
-
-
-
                     }, 2000); // Delay before spawning enemies
 
                 } else {
@@ -1759,7 +1732,6 @@ function spawnEnemies(floor) {
     // console.log(`Spawning enemies for floor ${floor}`);
     if (floorData.type === 'celebration') {
         console.log('Celebration Floor log!');
-        playOverlaySound();
         showCustomOverlayMessage(
             'Congratulations!',
             'You have reached the 14th Floor! Now Go back to work',
@@ -1773,6 +1745,7 @@ function spawnEnemies(floor) {
     }
 
     if (floorData.type === 'boss') {
+        let bossImageIndex = 0;
         for (let i = 0; i < floorData.enemies; i++) {
             // Spawn a boss
             const boss = {
@@ -1781,19 +1754,19 @@ function spawnEnemies(floor) {
                 y: GAME_HEIGHT / 2 - 50,
                 velocityX: (Math.random() - 0.5) * 2, // Random horizontal velocity
                 velocityY: (Math.random() - 0.5) * 2, // Random vertical velocity
-                hp: floorData.bossType === 'weak' ? 5000 :
-                    floorData.bossType === 'midstrong' ? 10000 : 20000,
-                maxHp: floorData.bossType === 'weak' ? 5000 :
-                    floorData.bossType === 'midstrong' ? 10000 : 20000,
+                hp: floorData.bossType === 'weak' ? 10000 :
+                    floorData.bossType === 'midstrong' ? 50000 : 100000,
+                maxHp: floorData.bossType === 'weak' ? 10000 :
+                    floorData.bossType === 'midstrong' ? 50000 : 100000,
                 damage: floorData.bossType === 'weak' ? 200 :
-                    floorData.bossType === 'midstrong' ? 400 : 800,
+                    floorData.bossType === 'midstrong' ? 400 : 600,
                 attackCooldown: floorData.bossType === 'weak' ? 2000 :
                     floorData.bossType === 'midstrong' ? 1500 : 1000,
                 isAlive: true,
                 lastAttackTime: 0,
                 angleOffset: 0,
                 attackPattern: 'radial', // Start with radial attack
-                spawnDelay: Date.now() + 1500,
+                spawnDelay: Date.now() + 1000,
                 element: document.createElement('div'),
                 hpBar: document.createElement('div'),
                 behavior: function () {
@@ -1871,12 +1844,19 @@ function spawnEnemies(floor) {
                 }
             };
 
+            const randomImage = BOSS_IMAGES[Math.floor(Math.random() * BOSS_IMAGES.length)];
+            boss.element.style.backgroundImage = `url('${randomImage}')`;
+            // Ensure the image is fully displayed
+            boss.element.style.backgroundSize = 'contain'; // Fit the image within the element
+            boss.element.style.backgroundPosition = 'center'; // Center the image
+            boss.element.style.backgroundRepeat = 'no-repeat'; // Prevent tiling
+
             boss.element.className = 'boss';
             boss.element.style.position = 'absolute';
             boss.element.style.width = '100px';
             boss.element.style.height = '100px';
-            boss.element.style.backgroundColor = floorData.bossType === 'weak' ? 'black' :
-                floorData.bossType === 'midstrong' ? 'darkred' : 'purple';
+            // boss.element.style.backgroundColor = floorData.bossType === 'weak' ? 'black' :
+            //     floorData.bossType === 'midstrong' ? 'darkred' : 'purple';
             boss.element.style.borderRadius = '50%';
             boss.element.style.left = `${boss.x}px`;
             boss.element.style.top = `${boss.y}px`;
@@ -1917,17 +1897,17 @@ function spawnEnemies(floor) {
                 x: Math.random() * (GAME_WIDTH - PLAYER_SIZE),
                 y: Math.random() * (GAME_HEIGHT - PLAYER_SIZE),
                 hp: floorData.type === 'weak' ? 500 :
-                    floorData.type === 'midstrong' ? 1000 : 2000,
+                    floorData.type === 'midstrong' ? 2000 : 5000,
                 maxHp: floorData.type === 'weak' ? 500 :
-                    floorData.type === 'midstrong' ? 1000 : 2000,
-                damage: floorData.type === 'weak' ? 10 :
-                    floorData.type === 'midstrong' ? 20 : 40,
+                    floorData.type === 'midstrong' ? 2000 : 5000,
+                damage: floorData.type === 'weak' ? 100 :
+                    floorData.type === 'midstrong' ? 200 : 400,
                 isMelee: isMelee,
                 lastAttackTime: 0,
                 attackCooldown: 1000,
                 isAlive: true, // Add a flag to track if enemy is alive
                 activeAttacks: [], // Store references to active melee attacks
-                spawnDelay: Date.now() + 1500,
+                spawnDelay: Date.now() + 1000,
                 element: document.createElement('div'),
                 sword: isMelee ? document.createElement('div') : null,
                 hpBarWrapper: document.createElement('div'), // Wrapper for the HP bar
@@ -2042,11 +2022,25 @@ function spawnEnemies(floor) {
                 }
             };
 
+            // Assign random images based on enemy type
+            if (isMelee) {
+                const randomImage = MELEE_ENEMY_IMAGES[Math.floor(Math.random() * MELEE_ENEMY_IMAGES.length)];
+                enemy.element.style.backgroundImage = `url('${randomImage}')`;
+            } else {
+                const randomImage = RANGED_ENEMY_IMAGES[Math.floor(Math.random() * RANGED_ENEMY_IMAGES.length)];
+                enemy.element.style.backgroundImage = `url('${randomImage}')`;
+            }
+
+            // image is fully displayed
+            enemy.element.style.backgroundSize = 'contain'; // Fit the image within the element
+            enemy.element.style.backgroundPosition = 'center'; // Center the image
+            enemy.element.style.backgroundRepeat = 'no-repeat'; // Prevent tiling
+
             enemy.element.className = 'enemy';
             enemy.element.style.position = 'absolute';
             enemy.element.style.width = '40px';
             enemy.element.style.height = '40px';
-            enemy.element.style.backgroundColor = isMelee ? 'orange' : 'blue';
+            // enemy.element.style.backgroundColor = isMelee ? 'orange' : 'blue';
             enemy.element.style.borderRadius = '50%';
             enemy.element.style.left = `${enemy.x}px`;
             enemy.element.style.top = `${enemy.y}px`;
@@ -2099,20 +2093,22 @@ function spawnEnemies(floor) {
 
 //
 function showCustomOverlayMessage(title, subtitle, options = {}) {
-    const overlay = document.createElement('div');
-    overlay.className = 'overlay-message';
-    overlay.style.position = 'absolute';
-    overlay.style.top = '20%';
-    overlay.style.left = '50%';
-    overlay.style.transform = 'translate(-50%, -50%)';
-    overlay.style.zIndex = '1000';
-    overlay.style.textAlign = 'center';
-    overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-    overlay.style.padding = '20px';
-    overlay.style.borderRadius = '10px';
-    overlay.style.boxShadow = '0 0 20px rgba(255, 255, 255, 0.8)';
+    setTimeout(() => {
+        playOverlaySound(); // Play the overlay sound
+        const overlay = document.createElement('div');
+        overlay.className = 'overlay-message';
+        overlay.style.position = 'absolute';
+        overlay.style.top = '20%';
+        overlay.style.left = '50%';
+        overlay.style.transform = 'translate(-50%, -50%)';
+        overlay.style.zIndex = '1000';
+        overlay.style.textAlign = 'center';
+        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+        overlay.style.padding = '20px';
+        overlay.style.borderRadius = '10px';
+        overlay.style.boxShadow = '0 0 20px rgba(255, 255, 255, 0.8)';
 
-    overlay.innerHTML = `
+        overlay.innerHTML = `
         <div class="message-title" style="
             font-size: ${options.titleFontSize || '48px'};
             font-weight: bold;
@@ -2130,10 +2126,11 @@ function showCustomOverlayMessage(title, subtitle, options = {}) {
         </div>
     `;
 
-    gameContainer.appendChild(overlay);
+        gameContainer.appendChild(overlay);
 
-    // Remove the overlay after 4 seconds
-    setTimeout(() => overlay.remove(), options.duration || 4000);
+        // Remove the overlay after 4 seconds
+        setTimeout(() => overlay.remove(), options.duration || 4000);
+    }, 3000);
 }
 
 // Apply knockback to the player
@@ -2209,7 +2206,7 @@ function endGame(winner) {
     } else {
         winnerText.textContent = `${winner} Wins!`;
     }
-
+    playGameOverSound();
     cancelAnimationFrame(gameLoopId);
 }
 
@@ -2510,8 +2507,27 @@ function createGlitchRectangle() {
 // });
 
 playAgainButton.addEventListener('click', () => {
-    localStorage.setItem('skipOverlay', 'true'); // Set a flag to skip the overlay
-    location.reload(); // Refresh the page
+
+    playStartSound(); // Play the start sound
+
+    // Create the glitch effect
+    const glitchInterval = setInterval(() => {
+        for (let i = 0; i < 20; i++) {
+            createGlitchRectangle();
+        }
+    }, 200); // Create new rectangles every 200ms
+
+    // Stop the glitch effect after 2 seconds
+    setTimeout(() => {
+        clearInterval(glitchInterval);
+        document.querySelectorAll('.glitch-rectangle').forEach(rect => rect.remove()); // Remove all rectangles
+        gameStartOverlay.style.display = 'none'; // Hide the start overlay
+        gameStarted = true; // Set the game as started
+        localStorage.setItem('skipOverlay', 'true'); // Set a flag to skip the overlay
+        location.reload(); // Refresh the page
+    }, 1500); // Match the duration of the glitch effect
+
+
 });
 
 window.addEventListener('load', () => {
