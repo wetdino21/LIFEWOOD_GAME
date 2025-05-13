@@ -30,22 +30,22 @@ let elevatorShown = false;
 
 const floors = [
     { id: 1, enemies: 0 }, // Floor 1 has no enemies
-    { id: 2, enemies: 0, type: 'celebration' },
+    // { id: 2, enemies: 0, type: 'celebration' },
     // // { id: 2, enemies: 1, type: 'boss', bossType: 'weak' },
-    // { id: 2, enemies: 3, type: 'weak' }, // Floor 2 has weak enemies
-    // { id: 3, enemies: 5, type: 'weak' }, // Floor 3 has weak enemies
-    // { id: 4, enemies: 7, type: 'weak' }, // Floor 4 has weak enemies
-    // { id: 5, enemies: 1, type: 'boss', bossType: 'weak' }, // Floor 5 has a weak boss
-    // { id: 6, enemies: 8, type: 'midstrong' }, // Floor 6 has mid-strong enemies
-    // { id: 7, enemies: 9, type: 'midstrong' }, // Floor 7 has mid-strong enemies
-    // { id: 8, enemies: 10, type: 'midstrong' }, // Floor 8 has mid-strong enemies
-    // { id: 9, enemies: 11, type: 'midstrong' }, // Floor 9 has mid-strong enemies
-    // { id: 10, enemies: 2, type: 'boss', bossType: 'midstrong' }, // Floor 10 has a mid-strong boss
-    // { id: 11, enemies: 10, type: 'strong' }, // Floor 11 has strong enemies
-    // { id: 12, enemies: 12, type: 'strong' }, // Floor 12 has strong enemies
-    // { id: 13, enemies: 3, type: 'boss', bossType: 'strong' }, // Floor 13 has a strong boss
-    // { id: 14, enemies: 0, type: 'celebration' }, // Floor 14 is a celebration floor
-    // { id: 15, enemies: 0 },
+    { id: 2, enemies: 3, type: 'weak' }, // Floor 2 has weak enemies
+    { id: 3, enemies: 5, type: 'weak' }, // Floor 3 has weak enemies
+    { id: 4, enemies: 7, type: 'weak' }, // Floor 4 has weak enemies
+    { id: 5, enemies: 1, type: 'boss', bossType: 'weak' }, // Floor 5 has a weak boss
+    { id: 6, enemies: 8, type: 'midstrong' }, // Floor 6 has mid-strong enemies
+    { id: 7, enemies: 9, type: 'midstrong' }, // Floor 7 has mid-strong enemies
+    { id: 8, enemies: 10, type: 'midstrong' }, // Floor 8 has mid-strong enemies
+    { id: 9, enemies: 11, type: 'midstrong' }, // Floor 9 has mid-strong enemies
+    { id: 10, enemies: 2, type: 'boss', bossType: 'midstrong' }, // Floor 10 has a mid-strong boss
+    { id: 11, enemies: 10, type: 'strong' }, // Floor 11 has strong enemies
+    { id: 12, enemies: 12, type: 'strong' }, // Floor 12 has strong enemies
+    { id: 13, enemies: 3, type: 'boss', bossType: 'strong' }, // Floor 13 has a strong boss
+    { id: 14, enemies: 0, type: 'celebration' }, // Floor 14 is a celebration floor
+    { id: 15, enemies: 0 },
 ];
 
 // Game state
@@ -59,7 +59,7 @@ let player1 = {
     // projectileSpeed: 3,
     bulletSize: 10,
     bulletCount: 1,
-    speed: 5,
+    speed: 2,
     lastShot: 0,
     superpower: false,
     superpowerEndTime: 0,
@@ -81,7 +81,7 @@ let player2 = {
     projectileSpeed: 0.5,
     bulletSize: 10,
     bulletCount: 1,
-    speed: 5,
+    speed: 2,
     lastShot: 0,
     superpower: false,
     superpowerEndTime: 0,
@@ -136,7 +136,7 @@ const BOSS_IMAGES = [
 const DROP_TYPES = [
     { type: 'bigger-bullets', icon: 'assets/atk_big.png', effect: (player) => player.bulletSize += 0.5 },
     { type: 'faster-projectile', icon: 'assets/atk_speed.png', effect: (player) => player.projectileSpeed += 0.3 },
-    { type: 'fast-movement', icon: 'assets/move_fast.png', effect: (player) => player.speed += 1 },
+    { type: 'fast-movement', icon: 'assets/move_fast.png', effect: (player) => player.speed += 0.1 },
     { type: 'bigger-damage', icon: 'assets/big_damage.png', effect: (player) => player.damage += 20 },
     { type: 'bullet-multiplier', icon: 'assets/add_bullet.png', effect: (player) => player.bulletCount += 1 },
     { type: 'heal', icon: 'assets/heal.png', effect: (player) => player.hp = Math.min(PLAYER_MAX_HP, player.hp + 2000) },
