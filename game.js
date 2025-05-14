@@ -2559,5 +2559,19 @@ window.addEventListener('load', () => {
     }
 });
 
+function checkOrientation() {
+    if (window.innerHeight > window.innerWidth) {
+        document.getElementById("rotatePrompt").style.display = "flex";
+        document.getElementById("gameContainer").style.display = "none";
+    } else {
+        document.getElementById("rotatePrompt").style.display = "none";
+        document.getElementById("gameContainer").style.display = "block";
+    }
+}
+
+window.addEventListener("resize", checkOrientation);
+window.addEventListener("orientationchange", checkOrientation);
+window.addEventListener("load", checkOrientation);
+
 // Start the game
 initGame();
